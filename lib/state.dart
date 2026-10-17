@@ -13,12 +13,14 @@ bool sameDay(DateTime a, DateTime b) =>
 class AppState extends ChangeNotifier {
   late SharedPreferences _prefs;
   bool loaded = false;
+  bool lightMode = false;
 
   Profile profile = Profile();
   bool onboarded = false;
   List<DietEntry> diet = [];
   List<FoodItem> customFoods = [];
   List<WorkoutEntry> workouts = [];
+  List<WeightEntry> weightLogs = [];
   List<Reminder> reminders = [];
   DateTime selectedDate = DateTime.now();
 
@@ -29,12 +31,16 @@ class AppState extends ChangeNotifier {
       profile = Profile.fromJson(jsonDecode(p) as Map<String, dynamic>);
     }
     onboarded = _prefs.getBool('onboarded') ?? false;
+    lightMode = _prefs.getBool('light_mode') ?? false;
     diet = decodeList(_prefs.getString('diet')).map(DietEntry.fromJson).toList();
     customFoods = decodeList(_prefs.getString('custom_foods'))
         .map(_customFoodFromJson)
         .toList();
     workouts = decodeList(_prefs.getString('workouts'))
         .map(WorkoutEntry.fromJson)
+        .toList();
+    weightLogs = decodeList(_prefs.getString('weight_logs'))
+        .map(WeightEntry.fromJson)
         .toList();
     reminders = decodeList(_prefs.getString('reminders'))
         .map(Reminder.fromJson)
@@ -57,12 +63,57 @@ class AppState extends ChangeNotifier {
       encodeList(customFoods.map(_customFoodToJson).toList()));
   Future<void> _saveWorkouts() => _prefs.setString(
       'workouts', encodeList(workouts.map((e) => e.toJson()).toList()));
+  Future<void> _saveWeightLogs() => _prefs.setString(
+      'weight_logs', encodeList(weightLogs.map((e) => e.toJson()).toList()));
   Future<void> _saveReminders() => _prefs.setString(
       'reminders', encodeList(reminders.map((e) => e.toJson()).toList()));
+
+  /// Complete user-owned payload for the authenticated cloud backup.
+  Map<String, dynamic> cloudSnapshot() => {
+        'onboarded': onboarded,
+        'profile': profile.toJson(),
+        'diet': diet.map((entry) => entry.toJson()).toList(),
+        'workouts': workouts.map((entry) => entry.toJson()).toList(),
+        'weightLogs': weightLogs.map((entry) => entry.toJson()).toList(),
+        'customFoods': customFoods.map(_customFoodToJson).toList(),
+        'reminders': reminders.map((entry) => entry.toJson()).toList(),
+      };
+
+  /// Replaces local records with this signed-in user's cloud records.
+  Future<void> applyCloudSnapshot(Map<String, dynamic> cloud) async {
+    onboarded = cloud['onboarded'] == true;
+    final remoteProfile = cloud['profile'];
+    if (remoteProfile is Map<String, dynamic> && remoteProfile.isNotEmpty) {
+      profile = Profile.fromJson(remoteProfile);
+    }
+    diet = _maps(cloud['diet']).map(DietEntry.fromJson).toList();
+    workouts = _maps(cloud['workouts']).map(WorkoutEntry.fromJson).toList();
+    weightLogs = _maps(cloud['weightLogs']).map(WeightEntry.fromJson).toList();
+    customFoods = _maps(cloud['customFoods']).map(_customFoodFromJson).toList();
+    reminders = _maps(cloud['reminders']).map(Reminder.fromJson).toList();
+    await Future.wait([
+      _saveProfile(), _saveDiet(), _saveWorkouts(), _saveWeightLogs(),
+      _saveCustomFoods(), _saveReminders(),
+    ]);
+    await _prefs.setBool('onboarded', onboarded);
+    notifyListeners();
+  }
+
+  List<Map<String, dynamic>> _maps(dynamic value) => (value as List? ?? const [])
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .toList();
 
   // ── date
   void selectDate(DateTime d) {
     selectedDate = DateTime(d.year, d.month, d.day);
+    notifyListeners();
+  }
+
+  Future<void> setLightMode(bool value) async {
+    if (lightMode == value) return;
+    lightMode = value;
+    await _prefs.setBool('light_mode', value);
     notifyListeners();
   }
 
@@ -190,6 +241,26 @@ class AppState extends ChangeNotifier {
   void removeWorkout(String id) {
     workouts.removeWhere((e) => e.id == id);
     _saveWorkouts();
+    notifyListeners();
+  }
+
+  // â”€â”€ body weight
+  WeightEntry? weightOn(DateTime date) {
+    for (final entry in weightLogs) {
+      if (sameDay(entry.date, date)) return entry;
+    }
+    return null;
+  }
+
+  void logWeight(DateTime date, double kg) {
+    final day = DateTime(date.year, date.month, date.day);
+    weightLogs.removeWhere((entry) => sameDay(entry.date, day));
+    weightLogs.add(WeightEntry(date: day, kg: kg));
+    weightLogs.sort((a, b) => a.date.compareTo(b.date));
+    // The newest reading remains the active profile weight for calorie estimates.
+    if (sameDay(day, DateTime.now())) profile.weightKg = kg;
+    _saveWeightLogs();
+    _saveProfile();
     notifyListeners();
   }
 

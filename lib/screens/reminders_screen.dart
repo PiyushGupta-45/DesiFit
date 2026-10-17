@@ -253,8 +253,8 @@ class _ReminderSheetState extends State<ReminderSheet> {
               initialTime: time,
               builder: (ctx, child) => Theme(
                 data: ThemeData.dark(useMaterial3: true).copyWith(
-                  colorScheme: const ColorScheme.dark(
-                      primary: C.saffron, surface: Color(0xFF1E1445)),
+                  colorScheme: ColorScheme.dark(
+                      primary: C.saffron, surface: const Color(0xFF1E1445)),
                 ),
                 child: child!,
               ),

@@ -172,6 +172,13 @@ class DietScreen extends StatelessWidget {
   }
 }
 
+class _AmountLabel {
+  const _AmountLabel(this.value, this.label);
+
+  final String value;
+  final String label;
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 
 enum _Mode { search, detail, custom }
@@ -353,6 +360,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   Widget _detail() {
     final f = food!;
     final n = f.calc(qty, style);
+    final totalAmount = _totalAmount(f, qty);
     final showStyles = f.styles.length > 1;
     return SingleChildScrollView(
       key: const ValueKey('detail'),
@@ -361,8 +369,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         Row(children: [
           Pressable(
             onTap: () => setState(() => mode = _Mode.search),
-            child: const Padding(
-              padding: EdgeInsets.all(6),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
               child: Icon(Icons.arrow_back_ios_new_rounded,
                   size: 20, color: C.text),
             ),
@@ -385,15 +393,27 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(children: [
-            Text('${n.kcal.round()}', style: t(50, w: FontWeight.w800, ls: -2)),
-            Text('calories', style: t(13, color: C.textDim)),
-            const SizedBox(height: 3),
-            Text(
-              f.weightBased == true
-                  ? '${_gramsLabel(qty * 100)} total weight'
-                  : '${_quantityLabel(qty)} × ${f.unit}',
-              style: t(12, color: C.textFaint),
-            ),
+            Row(children: [
+              Expanded(
+                child: Column(children: [
+                  Text(totalAmount.value,
+                      style: t(50, w: FontWeight.w800, ls: -2)),
+                  Text(totalAmount.label, style: t(13, color: C.textDim)),
+                ]),
+              ),
+              Container(
+                width: 1,
+                height: 52,
+                color: Colors.white.withValues(alpha: 0.16),
+              ),
+              Expanded(
+                child: Column(children: [
+                  Text('${n.kcal.round()}',
+                      style: t(50, w: FontWeight.w800, ls: -2)),
+                  Text('calories', style: t(13, color: C.textDim)),
+                ]),
+              ),
+            ]),
             const SizedBox(height: 16),
             Row(children: [
               _macro('Protein', n.protein, C.mint),
@@ -549,6 +569,32 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   String _gramsLabel(double grams) =>
       grams == grams.roundToDouble() ? '${grams.toInt()} g' : '${grams.toStringAsFixed(1)} g';
 
+  _AmountLabel _totalAmount(FoodItem food, double quantity) {
+    if (food.weightBased == true) {
+      return _AmountLabel(
+        _gramsLabel(quantity * 100).replaceAll(' g', ''),
+        'g total weight',
+      );
+    }
+
+    // Units such as "1 glass (250 ml)" can show the actual live total.
+    final match = RegExp(
+      r'\((\d+(?:\.\d+)?)\s*(g|ml)\)',
+      caseSensitive: false,
+    ).firstMatch(food.unit);
+    if (match != null) {
+      final perServing = double.parse(match.group(1)!);
+      final unit = match.group(2)!.toLowerCase();
+      final amount = perServing * quantity;
+      final value = amount == amount.roundToDouble()
+          ? amount.toInt().toString()
+          : amount.toStringAsFixed(1);
+      return _AmountLabel(value, '$unit total');
+    }
+
+    return _AmountLabel(_quantityLabel(quantity), 'servings total');
+  }
+
   String _quantityLabel(double value) => value == value.roundToDouble()
       ? value.toInt().toString()
       : value.toStringAsFixed(1);
@@ -565,8 +611,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         Row(children: [
           Pressable(
             onTap: () => setState(() => mode = _Mode.search),
-            child: const Padding(
-              padding: EdgeInsets.all(6),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
               child: Icon(Icons.arrow_back_ios_new_rounded,
                   size: 20, color: C.text),
             ),

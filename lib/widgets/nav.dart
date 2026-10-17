@@ -1,4 +1,6 @@
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -28,26 +30,32 @@ class LiquidNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(34),
-          child: Container(
+      child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
               height: 70,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(34),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withValues(alpha: 0.20),
-                    Colors.white.withValues(alpha: 0.07),
+                    C.isLight
+                        ? Colors.white.withValues(alpha: 0.88)
+                        : const Color(0xFF09263A).withValues(alpha: 0.90),
+                    C.isLight
+                        ? C.bg2.withValues(alpha: 0.76)
+                        : const Color(0xFF061A2B).withValues(alpha: 0.82),
                   ],
                 ),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+                border: Border.all(
+                    color: (C.isLight ? C.sky : C.mint)
+                        .withValues(alpha: C.isLight ? 0.22 : 0.30)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
+                      color: Colors.black.withValues(alpha: C.isLight ? 0.10 : 0.25),
                       blurRadius: 30,
                       offset: const Offset(0, 12)),
                 ],
@@ -58,26 +66,20 @@ class LiquidNavBar extends StatelessWidget {
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 520),
                     curve: Curves.easeOutBack,
-                    left: index * w + 5,
-                    top: 7,
-                    width: w - 10,
+                    left: index * w + 4,
+                    top: 6,
+                    width: w - 8,
                     height: 56,
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(28),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.38),
-                            Colors.white.withValues(alpha: 0.12),
-                          ],
-                        ),
+                        gradient: C.heroGradient,
                         border: Border.all(
                             color: Colors.white.withValues(alpha: 0.5)),
                         boxShadow: [
                           BoxShadow(
-                              color: C.saffron.withValues(alpha: 0.35),
+                              color: (C.isLight ? C.violet : C.magenta)
+                                  .withValues(alpha: 0.32),
                               blurRadius: 18),
                         ],
                       ),
@@ -101,12 +103,12 @@ class LiquidNavBar extends StatelessWidget {
                                   duration: const Duration(milliseconds: 400),
                                   curve: Curves.easeOutBack,
                                   child: Icon(items[i].icon,
-                                      size: 24,
+                                  size: 22,
                                       color: i == index ? Colors.white : C.textDim),
                                 ),
-                                const SizedBox(height: 3),
+                                const SizedBox(height: 2),
                                 Text(items[i].label,
-                                    style: t(10.5,
+                                    style: t(9.5,
                                         w: i == index
                                             ? FontWeight.w700
                                             : FontWeight.w500,
@@ -120,8 +122,8 @@ class LiquidNavBar extends StatelessWidget {
                   ),
                 ]);
               }),
+            ),
           ),
-        ),
       ),
     );
   }

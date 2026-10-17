@@ -214,7 +214,7 @@ class WorkoutScreen extends StatelessWidget {
                 Text('kcal', style: t(11.5, color: C.textDim)),
               ])
             else
-              const Icon(Icons.hotel_rounded, color: C.textFaint),
+              Icon(Icons.hotel_rounded, color: C.textFaint),
           ]),
         ),
       ),
@@ -490,7 +490,7 @@ class _AddWorkoutSheetState extends State<AddWorkoutSheet> {
               GlassChip(
                 label: r,
                 selected: reason == r,
-                activeGradient: const LinearGradient(colors: [C.flame, C.magenta]),
+                activeGradient: LinearGradient(colors: [C.flame, C.magenta]),
                 onTap: () => setState(() => reason = r),
               ),
           ]),

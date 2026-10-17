@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../auth/auth_state.dart';
 import '../models.dart';
 import '../state.dart';
 import '../widgets/glass.dart';
+import '../widgets/weight_log_sheet.dart';
+import 'history_dashboard_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final void Function(int tab) goTo;
@@ -26,7 +29,9 @@ class HomeScreen extends StatelessWidget {
     final over = remaining < 0;
     final hour = today.hour;
     final greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    final name = p.name.trim().isEmpty ? '' : ', ${p.name.trim().split(' ').first}';
+    final accountName = context.watch<AuthState>().name?.trim() ?? '';
+    final displayName = accountName.isNotEmpty ? accountName : p.name.trim();
+    final name = displayName.isEmpty ? '' : ', ${displayName.split(' ').first}';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 130),
@@ -36,6 +41,37 @@ class HomeScreen extends StatelessWidget {
             style: t(14, color: C.textDim)),
         const SizedBox(height: 4),
         Text('$greet$name 🙏', style: t(30, w: FontWeight.w800, h: 1.1, ls: -0.8)),
+        const SizedBox(height: 16),
+        _FitnessHero(name: displayName.split(' ').first),
+        if (s.weightOn(today) == null) ...[
+          const SizedBox(height: 14),
+          Pressable(
+            onTap: () async {
+              final kg = await showWeightLogSheet(
+                context,
+                date: today,
+                initialKg: s.profile.weightKg,
+              );
+              if (kg == null || !context.mounted) return;
+              // Let the dismissed modal finish deactivating before the provider rebuild.
+              await Future<void>.delayed(const Duration(milliseconds: 250));
+              if (context.mounted) s.logWeight(today, kg);
+            },
+            child: GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              tint: C.mintGradient,
+              child: Row(children: [
+                const Icon(Icons.monitor_weight_outlined, size: 23),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Log today\'s weight', style: t(15, w: FontWeight.w800)),
+                  Text('Keep your progress record accurate', style: t(12, color: C.textDim)),
+                ])),
+                Icon(Icons.add_circle_outline_rounded, color: C.mint),
+              ]),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
 
         // ── Hero ring
@@ -117,8 +153,16 @@ class HomeScreen extends StatelessWidget {
         _workoutCard(s, today, p),
 
         // ── Week chart
-        const SectionTitle('Last 7 days'),
-        _weekCard(s, p),
+        SectionTitle(
+          'Last 7 days',
+          trailing: Text('Tap for history', style: t(12, color: C.textDim)),
+        ),
+        Pressable(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const HistoryDashboardScreen()),
+          ),
+          child: _weekCard(s, p),
+        ),
       ],
     );
   }
@@ -295,6 +339,92 @@ class HomeScreen extends StatelessWidget {
               style: t(12, color: C.textDim)),
         ]),
       ]),
+    );
+  }
+}
+
+class _FitnessHero extends StatelessWidget {
+  final String name;
+  const _FitnessHero({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      tint: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          C.violet.withValues(alpha: 0.76),
+          C.sky.withValues(alpha: 0.46),
+          C.mint.withValues(alpha: 0.36),
+        ],
+      ),
+      child: SizedBox(
+        height: 142,
+        child: Stack(children: [
+          Positioned(
+            right: -16,
+            top: -38,
+            child: Container(
+              width: 176,
+              height: 176,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.10),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 4,
+            bottom: -15,
+            child: Icon(Icons.fitness_center_rounded,
+                size: 146, color: Colors.white.withValues(alpha: 0.22)),
+          ),
+          Positioned(
+            right: 37,
+            top: 22,
+            child: Container(
+              width: 66,
+              height: 66,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: C.heroGradient,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.36)),
+                boxShadow: [
+                  BoxShadow(
+                      color: C.magenta.withValues(alpha: 0.38), blurRadius: 22),
+                ],
+              ),
+              child: const Icon(Icons.directions_run_rounded,
+                  color: Colors.white, size: 35),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 112, 16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('YOUR DAILY RESET',
+                  style: t(10,
+                      w: FontWeight.w800,
+                      color: Colors.white.withValues(alpha: 0.78),
+                      ls: 1.1)),
+              const SizedBox(height: 8),
+              Text(name.isEmpty ? 'Small steps.\nStrong results.' : 'Let\'s move,\n$name!',
+                  style: t(21,
+                      w: FontWeight.w900,
+                      color: Colors.white,
+                      h: 1.05)),
+              const Spacer(),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.auto_awesome_rounded, size: 14, color: C.saffron),
+                const SizedBox(width: 5),
+                Text('Keep your streak alive',
+                    style: t(11.5, w: FontWeight.w600, color: Colors.white)),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }

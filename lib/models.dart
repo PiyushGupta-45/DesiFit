@@ -124,6 +124,24 @@ class WorkoutEntry {
       );
 }
 
+/// One body-weight reading for a calendar day.
+class WeightEntry {
+  final DateTime date;
+  final double kg;
+
+  const WeightEntry({required this.date, required this.kg});
+
+  Map<String, dynamic> toJson() => {
+        't': date.millisecondsSinceEpoch,
+        'kg': kg,
+      };
+
+  factory WeightEntry.fromJson(Map<String, dynamic> json) => WeightEntry(
+        date: DateTime.fromMillisecondsSinceEpoch(json['t'] as int),
+        kg: (json['kg'] as num).toDouble(),
+      );
+}
+
 class Profile {
   String name;
   int age;

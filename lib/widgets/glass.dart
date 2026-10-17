@@ -3,44 +3,58 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Palette: deep night-indigo with saffron, magenta and mint accents.
+/// Central adaptive palette. Keeping colours here makes every screen switch
+/// together instead of maintaining a separate light-theme copy per widget.
 class C {
-  static const bg1 = Color(0xFF0B0820);
-  static const bg2 = Color(0xFF1A0F3C);
-  static const saffron = Color(0xFFFFA94D);
-  static const flame = Color(0xFFFF6B4A);
-  static const magenta = Color(0xFFE5488F);
-  static const violet = Color(0xFF7B5CFF);
-  static const mint = Color(0xFF3DDBB0);
-  static const sky = Color(0xFF4DB8FF);
-  static const text = Color(0xFFF6F3FF);
-  static const textDim = Color(0xB3F6F3FF);
-  static const textFaint = Color(0x80F6F3FF);
+  static bool _light = false;
+  static bool get isLight => _light;
+  static void setLight(bool value) => _light = value;
 
-  static const heroGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [saffron, flame, magenta],
-  );
-  static const mintGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [mint, sky],
-  );
-  static const violetGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [violet, magenta],
-  );
+  static Color get bg1 =>
+      _light ? const Color(0xFFF3F7FA) : const Color(0xFF061B2B);
+  static Color get bg2 =>
+      _light ? const Color(0xFFDCEBF2) : const Color(0xFF0E3045);
+  static Color get saffron => const Color(0xFFFFB454);
+  static Color get flame => const Color(0xFFFF6B6B);
+  static Color get magenta => const Color(0xFFDC5B9B);
+  static Color get violet => const Color(0xFF5362D9);
+  static Color get mint => const Color(0xFF16B6A2);
+  static Color get sky => const Color(0xFF42A5F5);
+  static Color get text =>
+      _light ? const Color(0xFF172B40) : const Color(0xFFF2F7FF);
+  static Color get textDim =>
+      _light ? const Color(0xB3172B40) : const Color(0xB3F2F7FF);
+  static Color get textFaint =>
+      _light ? const Color(0x80172B40) : const Color(0x80F2F7FF);
+
+  static LinearGradient get heroGradient => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: _light ? [violet, sky] : [saffron, flame, magenta],
+      );
+  static LinearGradient get mintGradient => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [mint, sky],
+      );
+  static LinearGradient get violetGradient => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [violet, magenta],
+      );
 }
 
 TextStyle t(double size,
         {FontWeight w = FontWeight.w500,
-        Color color = C.text,
+        Color? color,
         double? h,
         double? ls}) =>
     TextStyle(
-        fontSize: size, fontWeight: w, color: color, height: h, letterSpacing: ls);
+        fontSize: size,
+        fontWeight: w,
+        color: color ?? C.text,
+        height: h,
+        letterSpacing: ls);
 
 /// Slow drifting aurora blobs behind everything – gives the glass something
 /// colourful to refract.
@@ -83,7 +97,7 @@ class _AuroraBackgroundState extends State<AuroraBackground>
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -197,12 +211,24 @@ class GlassCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withValues(alpha: 0.17 * strength),
-                  Colors.white.withValues(alpha: 0.05 * strength),
+                  Colors.white.withValues(
+                      alpha: (C.isLight ? 0.72 : 0.17) * strength),
+                  (C.isLight ? C.bg2 : Colors.white).withValues(
+                      alpha: (C.isLight ? 0.44 : 0.05) * strength),
                 ],
               ),
           border: Border.all(
-              color: Colors.white.withValues(alpha: 0.20 * strength)),
+              color: (C.isLight ? C.violet : Colors.white).withValues(
+                  alpha: (C.isLight ? 0.16 : 0.20) * strength)),
+          boxShadow: C.isLight
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF28506F).withValues(alpha: 0.09),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
         ),
         child: child,
       ),
@@ -252,7 +278,7 @@ class LiquidButton extends StatelessWidget {
   final String label;
   final IconData? icon;
   final VoidCallback? onTap;
-  final Gradient gradient;
+  final Gradient? gradient;
   final bool compact;
 
   const LiquidButton({
@@ -260,13 +286,14 @@ class LiquidButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.icon,
-    this.gradient = C.heroGradient,
+    this.gradient,
     this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
+    final buttonGradient = gradient ?? C.heroGradient;
     return Opacity(
       opacity: enabled ? 1 : 0.45,
       child: Pressable(
@@ -275,11 +302,11 @@ class LiquidButton extends StatelessWidget {
           padding: EdgeInsets.symmetric(
               horizontal: compact ? 16 : 24, vertical: compact ? 10 : 15),
           decoration: BoxDecoration(
-            gradient: gradient,
+            gradient: buttonGradient,
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
-                color: (gradient.colors.first).withValues(alpha: 0.45),
+                color: (buttonGradient.colors.first).withValues(alpha: 0.45),
                 blurRadius: 22,
                 offset: const Offset(0, 8),
               ),
@@ -344,10 +371,14 @@ class GlassChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
           gradient: selected ? (activeGradient ?? C.heroGradient) : null,
-          color: selected ? null : Colors.white.withValues(alpha: 0.09),
+          color: selected
+              ? null
+              : (C.isLight ? Colors.white : Colors.white)
+                  .withValues(alpha: C.isLight ? 0.58 : 0.09),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-              color: Colors.white.withValues(alpha: selected ? 0.5 : 0.16)),
+              color: (C.isLight ? C.violet : Colors.white).withValues(
+                  alpha: selected ? 0.5 : (C.isLight ? 0.18 : 0.16))),
         ),
         child: Text(label,
             style: t(13.5,
@@ -365,6 +396,8 @@ class GlassField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final TextInputType? keyboardType;
   final String? suffix;
+  final bool obscureText;
+  final ValueChanged<String>? onSubmitted;
 
   const GlassField({
     super.key,
@@ -374,20 +407,27 @@ class GlassField extends StatelessWidget {
     this.onChanged,
     this.keyboardType,
     this.suffix,
+    this.obscureText = false,
+    this.onSubmitted,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.09),
+        color: (C.isLight ? Colors.white : Colors.white)
+            .withValues(alpha: C.isLight ? 0.64 : 0.09),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        border: Border.all(
+            color: (C.isLight ? C.violet : Colors.white)
+                .withValues(alpha: C.isLight ? 0.18 : 0.16)),
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
+        onSubmitted: onSubmitted,
         keyboardType: keyboardType,
+        obscureText: obscureText,
         style: t(16),
         cursorColor: C.saffron,
         decoration: InputDecoration(
@@ -459,19 +499,20 @@ class GlowRing extends StatelessWidget {
   final double progress; // 0..1+
   final double size;
   final double stroke;
-  final Gradient gradient;
+  final Gradient? gradient;
   final Widget? child;
   const GlowRing({
     super.key,
     required this.progress,
     required this.size,
     this.stroke = 16,
-    this.gradient = C.heroGradient,
+    this.gradient,
     this.child,
   });
 
   @override
   Widget build(BuildContext context) {
+    final ringGradient = gradient ?? C.heroGradient;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0).toDouble()),
       duration: const Duration(milliseconds: 500),
@@ -480,7 +521,7 @@ class GlowRing extends StatelessWidget {
         width: size,
         height: size,
         child: CustomPaint(
-          painter: _RingPainter(v, stroke, gradient),
+          painter: _RingPainter(v, stroke, ringGradient),
           child: Center(child: child),
         ),
       ),
