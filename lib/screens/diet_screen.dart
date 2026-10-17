@@ -199,6 +199,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   final _cP = TextEditingController();
   final _cC = TextEditingController();
   final _cF = TextEditingController();
+  final _weight = TextEditingController();
   bool _customPer100g = false;
 
   static const cats = [
@@ -208,7 +209,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   @override
   void dispose() {
-    for (final c in [_cName, _cKcal, _cP, _cC, _cF]) {
+    for (final c in [_cName, _cKcal, _cP, _cC, _cF, _weight]) {
       c.dispose();
     }
     super.dispose();
@@ -218,6 +219,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         food = f;
         qty = 1;
         style = f.defaultStyle;
+        _weight.text = f.weightBased == true ? '100' : '';
         mode = _Mode.detail;
       });
 
@@ -385,6 +387,13 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           child: Column(children: [
             Text('${n.kcal.round()}', style: t(50, w: FontWeight.w800, ls: -2)),
             Text('calories', style: t(13, color: C.textDim)),
+            const SizedBox(height: 3),
+            Text(
+              f.weightBased == true
+                  ? '${_gramsLabel(qty * 100)} total weight'
+                  : '${_quantityLabel(qty)} × ${f.unit}',
+              style: t(12, color: C.textFaint),
+            ),
             const SizedBox(height: 16),
             Row(children: [
               _macro('Protein', n.protein, C.mint),
@@ -506,19 +515,24 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         setState(() => qty = (value / 100).clamp(0.01, 100).toDouble());
       }
     }
+    void changeGrams(double delta) {
+      final value = (grams + delta).clamp(1, 10000).toDouble();
+      setState(() {
+        qty = value / 100;
+        _weight.text = _gramsLabel(value).replaceAll(' g', '');
+      });
+    }
 
     return Row(children: [
       _stepBtn(Icons.remove_rounded,
-          () => setState(() => qty = (qty - 0.5).clamp(0.5, 100).toDouble())),
+          () => changeGrams(-10)),
       Expanded(
-        child: TextFormField(
-          key: ValueKey('weight-${grams.round()}'),
-          initialValue: grams == grams.roundToDouble()
-              ? grams.toInt().toString()
-              : grams.toStringAsFixed(1),
+        child: TextField(
+          controller: _weight,
           textAlign: TextAlign.center,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          onFieldSubmitted: setGrams,
+          onChanged: setGrams,
+          onSubmitted: setGrams,
           style: t(28, w: FontWeight.w800),
           decoration: InputDecoration(
             suffixText: 'g',
@@ -528,9 +542,16 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         ),
       ),
       _stepBtn(Icons.add_rounded,
-          () => setState(() => qty = (qty + 0.5).clamp(0.5, 100).toDouble())),
+          () => changeGrams(10)),
     ]);
   }
+
+  String _gramsLabel(double grams) =>
+      grams == grams.roundToDouble() ? '${grams.toInt()} g' : '${grams.toStringAsFixed(1)} g';
+
+  String _quantityLabel(double value) => value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
 
   // ── custom food
   Widget _custom() {
@@ -636,7 +657,12 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                       weightBased: _customPer100g,
                     );
                     context.read<AppState>().saveCustomFood(f);
-                    _pick(f);
+                    // Keep the saved item in search. The user can then choose it
+                    // exactly like any other food and select Breakfast/Lunch/etc.
+                    setState(() {
+                      query = f.name;
+                      mode = _Mode.search;
+                    });
                   }
                 : null,
           ),
