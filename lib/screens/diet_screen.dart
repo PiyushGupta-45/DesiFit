@@ -69,6 +69,30 @@ class DietScreen extends StatelessWidget {
             ]),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+          child: Pressable(
+            onTap: () => showGlassSheet(
+                context, (_) => const AddFoodSheet(recipeOnly: true)),
+            child: GlassCard(
+              radius: 24,
+              tint: C.violetGradient,
+              child: Row(children: [
+                const Icon(Icons.auto_awesome_rounded,
+                    color: Colors.white, size: 26),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Custom food',
+                      style: t(16, w: FontWeight.w800, color: Colors.white)),
+                  Text('Build a dish from ingredients and calculate its macros',
+                      style: t(12, color: Colors.white70)),
+                ])),
+                const Icon(Icons.arrow_forward_ios_rounded,
+                    color: Colors.white, size: 18),
+              ]),
+            ),
+          ),
+        ),
         for (final m in MealType.values) ...[
           Builder(builder: (context) {
             final items = entries.where((e) => e.meal == m).toList();
@@ -238,7 +262,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   static const cats = [
     'All', 'Bread', 'Rice', 'Dal', 'Sabzi', 'Non-veg', 'Tiffin', 'Snack',
-    'Dairy', 'Drinks', 'Sweet', 'Fruit'
+    'Dairy', 'Drinks', 'Sweet', 'Fruit', 'Ingredients'
   ];
 
   @override

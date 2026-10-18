@@ -152,9 +152,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
           ),
         ],
-        const SectionTitle('Body profile'),
+        if (widget.onboarding || _goalsOpen) ...[
         GlassCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Body profile', style: t(16, w: FontWeight.w800)),
+            const SizedBox(height: 12),
             Row(children: [
               GlassChip(
                   label: '♂ Male',
@@ -202,6 +204,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ],
           ]),
         ),
+        ],
         if (widget.onboarding || _goalsOpen) ...[
           const SectionTitle('Daily targets'),
           GlassCard(
