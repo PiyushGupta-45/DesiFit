@@ -18,6 +18,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   final _currentPassword = TextEditingController();
   final _newPassword = TextEditingController();
   bool _passwordEditor = false;
+  bool _goalsOpen = false;
 
   @override
   void dispose() {
@@ -46,13 +47,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(6, 0, 6, 16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.onboarding ? 'Namaste 🙏' : 'Profile & goals',
+            Text(widget.onboarding ? 'Namaste 🙏' : 'Profile',
                 style: t(32, w: FontWeight.w800, ls: -0.8)),
             const SizedBox(height: 4),
             Text(
                 widget.onboarding
                     ? 'Tell us a little about you to set smart daily targets.'
-                    : 'Account, body stats and daily targets',
+                    : 'Account settings and body details',
                 style: t(14, color: C.textDim)),
           ]),
         ),
@@ -132,6 +133,24 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ),
             ]),
           ),
+          const SectionTitle('Fitness plan'),
+          Pressable(
+            onTap: () => setState(() => _goalsOpen = !_goalsOpen),
+            child: GlassCard(
+              tint: C.violetGradient,
+              child: Row(children: [
+                const Icon(Icons.flag_rounded, color: Colors.white, size: 26),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Goals & daily targets', style: t(16, w: FontWeight.w800, color: Colors.white)),
+                  Text(_goalsOpen ? 'Tap to hide goal settings' : 'Calories, protein and fitness goal',
+                      style: t(12, color: Colors.white70)),
+                ])),
+                Icon(_goalsOpen ? Icons.expand_less_rounded : Icons.arrow_forward_ios_rounded,
+                    color: Colors.white, size: 20),
+              ]),
+            ),
+          ),
         ],
         const SectionTitle('Body profile'),
         GlassCard(
@@ -168,27 +187,24 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   onTap: () => edit(() => p.activity = a.$2),
                 ),
             ]),
-            const SizedBox(height: 16),
-            Text('Goal', style: t(14, w: FontWeight.w700)),
-            const SizedBox(height: 10),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              GlassChip(
-                  label: '📉 Lose fat',
-                  selected: p.goal < 0,
-                  onTap: () => edit(() => p.goal = -1)),
-              GlassChip(
-                  label: '⚖️ Maintain',
-                  selected: p.goal == 0,
-                  onTap: () => edit(() => p.goal = 0)),
-              GlassChip(
-                  label: '💪 Build muscle',
-                  selected: p.goal > 0,
-                  onTap: () => edit(() => p.goal = 1)),
-            ]),
+            if (widget.onboarding || _goalsOpen) ...[
+              const SizedBox(height: 16),
+              Text('Goal', style: t(14, w: FontWeight.w700)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                GlassChip(label: '📉 Lose fat', selected: p.goal < 0,
+                    onTap: () => edit(() => p.goal = -1)),
+                GlassChip(label: '⚖️ Maintain', selected: p.goal == 0,
+                    onTap: () => edit(() => p.goal = 0)),
+                GlassChip(label: '💪 Build muscle', selected: p.goal > 0,
+                    onTap: () => edit(() => p.goal = 1)),
+              ]),
+            ],
           ]),
         ),
-        const SectionTitle('Daily targets'),
-        GlassCard(
+        if (widget.onboarding || _goalsOpen) ...[
+          const SectionTitle('Daily targets'),
+          GlassCard(
           child: Column(children: [
             _slider('Calories', p.calorieTarget.toDouble(), 1000, 4000, 'kcal',
                 (v) => edit(() => p.calorieTarget = (v / 10).round() * 10),
@@ -232,7 +248,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
               ]),
             ),
           ]),
-        ),
+          ),
+        ],
         if (widget.onboarding) ...[
           const SizedBox(height: 26),
           Center(

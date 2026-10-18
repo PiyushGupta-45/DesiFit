@@ -32,12 +32,19 @@ class DietScreen extends StatelessWidget {
                     style: t(14, color: C.textDim)),
               ]),
             ),
-            LiquidButton(
-              label: 'Add food',
-              icon: Icons.add_rounded,
-              compact: true,
-              onTap: () => showGlassSheet(context, (_) => const AddFoodSheet()),
-            ),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              LiquidButton(
+                label: 'Add food',
+                icon: Icons.add_rounded,
+                compact: true,
+                onTap: () => showGlassSheet(context, (_) => const AddFoodSheet()),
+              ),
+              const SizedBox(height: 6),
+              Pressable(
+                onTap: () => showGlassSheet(context, (_) => const AddFoodSheet(recipeOnly: true)),
+                child: Text('✦ Make custom recipe', style: t(12, color: C.mint, w: FontWeight.w700)),
+              ),
+            ]),
           ]),
         ),
         const DateStrip(),
@@ -183,16 +190,31 @@ class _AmountLabel {
 
 enum _Mode { search, detail, custom }
 
+class _RecipeIngredient {
+  _RecipeIngredient(this.food, {String amount = '1'})
+      : amountController = TextEditingController(text: amount);
+
+  final FoodItem food;
+  final TextEditingController amountController;
+
+  double get amount => double.tryParse(amountController.text.trim()) ?? 0;
+  double get servings => food.weightBased ? amount / 100 : amount;
+  Nutrition get nutrition => food.calc(servings, food.defaultStyle);
+
+  void dispose() => amountController.dispose();
+}
+
 class AddFoodSheet extends StatefulWidget {
   final MealType? initialMeal;
-  const AddFoodSheet({super.key, this.initialMeal});
+  final bool recipeOnly;
+  const AddFoodSheet({super.key, this.initialMeal, this.recipeOnly = false});
 
   @override
   State<AddFoodSheet> createState() => _AddFoodSheetState();
 }
 
 class _AddFoodSheetState extends State<AddFoodSheet> {
-  _Mode mode = _Mode.search;
+  late _Mode mode;
   String query = '';
   String cat = 'All';
   FoodItem? food;
@@ -208,6 +230,11 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   final _cF = TextEditingController();
   final _weight = TextEditingController();
   bool _customPer100g = false;
+  bool _recipeMode = true;
+  bool _recipeByWeight = false;
+  final _recipeName = TextEditingController();
+  final _recipeYield = TextEditingController(text: '1');
+  final List<_RecipeIngredient> _ingredients = [];
 
   static const cats = [
     'All', 'Bread', 'Rice', 'Dal', 'Sabzi', 'Non-veg', 'Tiffin', 'Snack',
@@ -215,9 +242,18 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    mode = widget.recipeOnly ? _Mode.custom : _Mode.search;
+  }
+
+  @override
   void dispose() {
-    for (final c in [_cName, _cKcal, _cP, _cC, _cF, _weight]) {
+    for (final c in [_cName, _cKcal, _cP, _cC, _cF, _weight, _recipeName, _recipeYield]) {
       c.dispose();
+    }
+    for (final ingredient in _ingredients) {
+      ingredient.dispose();
     }
     super.dispose();
   }
@@ -601,8 +637,187 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       ? value.toInt().toString()
       : value.toStringAsFixed(1);
 
-  // ── custom food
-  Widget _custom() {
+  // ── custom food / recipe builder
+  Widget _custom() => _recipeMode ? _recipeBuilder() : _manualCustom();
+
+  Nutrition get _recipeNutrition => _ingredients.fold(
+      Nutrition.zero, (total, ingredient) => total + ingredient.nutrition);
+
+  Future<void> _addRecipeIngredient() async {
+    final app = context.read<AppState>();
+    final foods = searchFoods('', extra: [...app.customFoods, ...app.catalogFoods]);
+    final picked = await showDialog<FoodItem>(
+      context: context,
+      builder: (dialogContext) {
+        var query = '';
+        return StatefulBuilder(builder: (context, setDialogState) {
+          final matches = foods.where((food) {
+            final text = '${food.name} ${food.hindi} ${food.cat}'.toLowerCase();
+            return text.contains(query.trim().toLowerCase());
+          }).toList();
+          return AlertDialog(
+            backgroundColor: C.bg2,
+            title: Text('Choose ingredient', style: t(20, w: FontWeight.w800)),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 390,
+              child: Column(children: [
+                GlassField(
+                  hint: 'Search paneer, rice, tofu...',
+                  icon: Icons.search_rounded,
+                  onChanged: (value) => setDialogState(() => query = value),
+                ),
+                const SizedBox(height: 10),
+                Expanded(child: ListView.separated(
+                  itemCount: matches.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, index) {
+                    final food = matches[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(food.name, style: t(15, w: FontWeight.w700)),
+                      subtitle: Text(food.weightBased ? 'Per 100 g' : food.unit,
+                          style: t(12, color: C.textDim)),
+                      trailing: Text('${food.kcal.round()} kcal',
+                          style: t(12, color: C.mint, w: FontWeight.w700)),
+                      onTap: () => Navigator.pop(dialogContext, food),
+                    );
+                  },
+                )),
+              ]),
+            ),
+          );
+        });
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() => _ingredients.add(_RecipeIngredient(
+          picked, amount: picked.weightBased ? '100' : '1')));
+    }
+  }
+
+  Widget _recipeBuilder() {
+    final total = _recipeNutrition;
+    final yieldValue = double.tryParse(_recipeYield.text.trim()) ?? 0;
+    final divisor = _recipeByWeight
+        ? (yieldValue <= 0 ? 0 : yieldValue / 100)
+        : yieldValue;
+    final perUnit = divisor <= 0 ? Nutrition.zero : total.scale(1 / divisor);
+    final canSave = _recipeName.text.trim().isNotEmpty &&
+        _ingredients.isNotEmpty && yieldValue > 0;
+    return SingleChildScrollView(
+      key: const ValueKey('recipe'),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Pressable(onTap: () => setState(() => mode = _Mode.search),
+            child: Padding(padding: const EdgeInsets.all(6),
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: C.text))),
+          const SizedBox(width: 6),
+          Expanded(child: Text('Make a recipe', style: t(22, w: FontWeight.w800))),
+          TextButton.icon(
+            onPressed: () => setState(() => _recipeMode = false),
+            icon: const Icon(Icons.edit_note_rounded, size: 18),
+            label: const Text('Label values'),
+          ),
+        ]),
+        Padding(padding: const EdgeInsets.only(left: 40, top: 2),
+          child: Text('Pick ingredients from the food database; nutrition is calculated automatically.',
+              style: t(13, color: C.textDim))),
+        const SizedBox(height: 18),
+        GlassField(controller: _recipeName, hint: 'Dish name, e.g. Tofu sandwich',
+          icon: Icons.restaurant_menu_rounded, onChanged: (_) => setState(() {})),
+        const SizedBox(height: 16),
+        Text('Ingredients', style: t(16, w: FontWeight.w800)),
+        const SizedBox(height: 8),
+        if (_ingredients.isEmpty)
+          GlassCard(child: Text('Add each ingredient and its amount. The app will total the recipe for you.',
+              style: t(13, color: C.textDim))),
+        for (var i = 0; i < _ingredients.length; i++)
+          Padding(padding: const EdgeInsets.only(top: 8),
+              child: _recipeIngredientRow(_ingredients[i], i)),
+        const SizedBox(height: 10),
+        Center(child: LiquidButton(label: 'Add ingredient', icon: Icons.add_rounded,
+          compact: true, gradient: C.mintGradient, onTap: _addRecipeIngredient)),
+        const SizedBox(height: 18),
+        Text('How will you log this dish?', style: t(16, w: FontWeight.w800)),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: GlassChip(label: 'Piece / serving', selected: !_recipeByWeight,
+              activeGradient: C.violetGradient,
+              onTap: () => setState(() => _recipeByWeight = false))),
+          const SizedBox(width: 8),
+          Expanded(child: GlassChip(label: 'By weight', selected: _recipeByWeight,
+              activeGradient: C.mintGradient,
+              onTap: () => setState(() => _recipeByWeight = true))),
+        ]),
+        const SizedBox(height: 10),
+        GlassField(controller: _recipeYield,
+          hint: _recipeByWeight ? 'Total prepared weight' : 'Number of pieces / servings made',
+          suffix: _recipeByWeight ? 'g' : 'pieces',
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (_) => setState(() {})),
+        const SizedBox(height: 16),
+        GlassCard(tint: C.mintGradient, child: Column(children: [
+          Text('Per ${_recipeByWeight ? '100 g' : 'piece'}', style: t(13, color: Colors.white70)),
+          const SizedBox(height: 4),
+          Text('${perUnit.kcal.round()} kcal', style: t(30, w: FontWeight.w900, color: Colors.white)),
+          const SizedBox(height: 10),
+          Row(children: [
+            _recipeMacro('Protein', perUnit.protein), _recipeMacro('Carbs', perUnit.carbs),
+            _recipeMacro('Fat', perUnit.fat),
+          ]),
+        ])),
+        const SizedBox(height: 24),
+        Center(child: LiquidButton(label: 'Save recipe', icon: Icons.bookmark_add_rounded,
+          onTap: canSave ? () {
+            final food = FoodItem(
+              name: _recipeName.text.trim(), hindi: 'My recipe',
+              unit: _recipeByWeight ? '100 g' : '1 piece', cat: 'Custom',
+              kcal: perUnit.kcal, p: perUnit.protein, c: perUnit.carbs, f: perUnit.fat,
+              oil: 0, styles: const [CookStyle.plain], defaultStyle: CookStyle.plain,
+              custom: true, weightBased: _recipeByWeight,
+            );
+            context.read<AppState>().saveCustomFood(food);
+            setState(() { query = food.name; mode = _Mode.search; });
+          } : null)),
+      ]),
+    );
+  }
+
+  Widget _recipeIngredientRow(_RecipeIngredient ingredient, int index) {
+    final food = ingredient.food;
+    final n = ingredient.nutrition;
+    return GlassCard(radius: 20, padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      child: Row(children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(food.name, style: t(14, w: FontWeight.w800)),
+          Text('${n.kcal.round()} kcal · P ${n.protein.toStringAsFixed(1)}g',
+              style: t(12, color: C.textDim)),
+        ])),
+        SizedBox(width: 92, child: TextField(
+          controller: ingredient.amountController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          textAlign: TextAlign.center, onChanged: (_) => setState(() {}),
+          style: t(15, w: FontWeight.w800),
+          decoration: InputDecoration(isDense: true,
+            suffixText: food.weightBased ? 'g' : '×',
+            suffixStyle: t(12, color: C.textDim),
+            border: UnderlineInputBorder(borderSide: BorderSide(color: C.textFaint))),
+        )),
+        IconButton(onPressed: () => setState(() {
+          final removed = _ingredients.removeAt(index); removed.dispose();
+        }), icon: Icon(Icons.close_rounded, color: C.flame, size: 20)),
+      ]));
+  }
+
+  Widget _recipeMacro(String label, double value) => Expanded(child: Column(children: [
+    Text('${value.toStringAsFixed(value < 10 ? 1 : 0)} g',
+        style: t(15, w: FontWeight.w800, color: Colors.white)),
+    Text(label, style: t(11, color: Colors.white70)),
+  ]));
+
+  Widget _manualCustom() {
     double val(TextEditingController c) =>
         double.tryParse(c.text.trim()) ?? 0;
     final valid = _cName.text.trim().isNotEmpty && val(_cKcal) > 0;

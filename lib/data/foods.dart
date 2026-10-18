@@ -124,7 +124,7 @@ const _sweet = [CookStyle.plain, CookStyle.tadka];
 
 FoodItem _f(String name, String hindi, String unit, String cat, double kcal,
         double p, double c, double f, double oil, List<CookStyle> styles,
-        [CookStyle? def]) =>
+        [CookStyle? def, bool weightBased = false]) =>
     FoodItem(
       name: name,
       hindi: hindi,
@@ -137,6 +137,7 @@ FoodItem _f(String name, String hindi, String unit, String cat, double kcal,
       oil: oil,
       styles: styles,
       defaultStyle: def ?? styles.first,
+      weightBased: weightBased,
     );
 
 /// Built-in Indian food database. Values are typical per-serving averages
@@ -177,7 +178,7 @@ final List<FoodItem> indianFoods = [
   _f('Sambar', 'सांभर', '1 katori (150 g)', 'Dal', 70, 3.5, 11, 1.5, 0.5, _dal, CookStyle.home),
   _f('Kadhi', 'कढ़ी', '1 katori (150 g)', 'Dal', 90, 3, 9, 4, 0.6, _dal, CookStyle.home),
   _f('Sprouts Salad', 'अंकुरित मूंग', '1 katori (100 g)', 'Dal', 90, 7, 15, 0.6, 0, _raw),
-  _f('Soya Chunks (dry)', 'सोया चंक्स', '30 g dry', 'Dal', 104, 15.6, 9.9, 0.3, 0.3, _veg, CookStyle.plain),
+  _f('Soya Chunks (dry)', 'सोया चंक्स', '100 g dry', 'Dal', 345, 52, 33, 1, 0.3, _veg, CookStyle.plain, true),
 
   // ── Sabzi & veg curries
   _f('Aloo Gobi', 'आलू गोभी', '1 katori (150 g)', 'Sabzi', 100, 2.5, 15, 2, 1.0, _veg, CookStyle.home),
@@ -190,6 +191,9 @@ final List<FoodItem> indianFoods = [
   _f('Paneer Butter Masala', 'पनीर बटर मसाला', '1 katori (150 g)', 'Sabzi', 200, 9, 8, 14, 0.9, _curry, CookStyle.restaurant),
   _f('Matar Paneer', 'मटर पनीर', '1 katori (150 g)', 'Sabzi', 170, 9, 9, 10, 0.9, _curry, CookStyle.home),
   _f('Paneer Bhurji', 'पनीर भुर्जी', '1 katori (100 g)', 'Sabzi', 190, 12, 4, 14, 0.7, _curry, CookStyle.home),
+  _f('Tofu', 'टोफू', '100 g', 'Dairy', 144, 15.7, 2.8, 8.7, 0.2, _veg, CookStyle.plain, true),
+  _f('Tofu Bhurji', 'टोफू भुर्जी', '1 katori (180 g)', 'Sabzi', 220, 20, 12, 11, 0.8, _curry, CookStyle.home),
+  _f('Soya Bhurji', 'सोया भुर्जी', '1 katori (180 g)', 'Sabzi', 245, 23, 18, 10, 0.7, _curry, CookStyle.home),
   _f('Malai Kofta', 'मलाई कोफ्ता', '2 pieces + gravy', 'Sabzi', 260, 7, 16, 18, 0.9, _curry, CookStyle.restaurant),
   _f('Dum Aloo', 'दम आलू', '1 katori (150 g)', 'Sabzi', 150, 3, 22, 5, 1.0, _curry, CookStyle.home),
   _f('Kadai Paneer', 'Kadai paneer', '1 katori (150 g)', 'Sabzi', 190, 10, 10, 12, 0.9, _curry, CookStyle.home),

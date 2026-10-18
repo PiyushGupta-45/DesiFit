@@ -43,7 +43,8 @@ function parseFood(line) {
     kcal: Number(kcal), p: Number(p), c: Number(c), f: Number(f), oil: Number(oil),
     styles: [...new Set(availableStyles)],
     defaultStyle: explicitDefault || availableStyles[0],
-    weightBased: false,
+    // _f(..., CookStyle.plain, true) marks values as per 100 g in Dart.
+    weightBased: /,\s*true\s*$/.test(styleExpression),
     active: true,
   };
 }

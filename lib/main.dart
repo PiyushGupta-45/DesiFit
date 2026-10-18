@@ -305,7 +305,7 @@ class _ShellState extends State<Shell> {
     NavItem(Icons.fitness_center_rounded, 'Workout'),
     NavItem(Icons.monitor_weight_outlined, 'Weight'),
     NavItem(Icons.notifications_active_rounded, 'Alerts'),
-    NavItem(Icons.tune_rounded, 'Goals'),
+    NavItem(Icons.person_rounded, 'Profile'),
   ];
 
   void go(int i) {

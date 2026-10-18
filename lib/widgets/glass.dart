@@ -11,15 +11,15 @@ class C {
   static void setLight(bool value) => _light = value;
 
   static Color get bg1 =>
-      _light ? const Color(0xFFF3F7FA) : const Color(0xFF061B2B);
+      _light ? const Color(0xFFF4F7FC) : const Color(0xFF071522);
   static Color get bg2 =>
-      _light ? const Color(0xFFDCEBF2) : const Color(0xFF0E3045);
-  static Color get saffron => const Color(0xFFFFB454);
-  static Color get flame => const Color(0xFFFF6B6B);
-  static Color get magenta => const Color(0xFFDC5B9B);
-  static Color get violet => const Color(0xFF5362D9);
-  static Color get mint => const Color(0xFF16B6A2);
-  static Color get sky => const Color(0xFF42A5F5);
+      _light ? const Color(0xFFDDEAF7) : const Color(0xFF102B3F);
+  static Color get saffron => const Color(0xFFFFB84D);
+  static Color get flame => const Color(0xFFFF647C);
+  static Color get magenta => const Color(0xFFF05A9D);
+  static Color get violet => const Color(0xFF7377E8);
+  static Color get mint => const Color(0xFF20C7B2);
+  static Color get sky => const Color(0xFF4BAAFF);
   static Color get text =>
       _light ? const Color(0xFF172B40) : const Color(0xFFF2F7FF);
   static Color get textDim =>
