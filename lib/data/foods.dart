@@ -226,6 +226,68 @@ final List<FoodItem> indianFoods = [
   _f('Coconut Water', 'नारियल पानी', '1 glass (250 ml)', 'Drinks', 45, 0.5, 10, 0.2, 0, _raw),
   _f('Sattu Drink', 'सत्तू शरबत', '1 glass (250 ml)', 'Drinks', 170, 8, 30, 2, 0, _raw),
   _f('Whey Protein', 'व्हे प्रोटीन', '1 scoop (30 g)', 'Drinks', 120, 24, 3, 1.5, 0, _raw),
+  
+  // ── Sandwiches & burgers
+  _f('Veg Sandwich', 'वेज सैंडविच', '2 slices (120 g)', 'Snack', 280, 8, 38, 10, 0.3, _tiffin, CookStyle.tawa),
+  _f('Bombay Masala Sandwich', 'बॉम्बे मसाला सैंडविच', '1 sandwich (180 g)', 'Snack', 350, 9, 52, 11, 0.5, _tiffin, CookStyle.tawa),
+  _f('Grilled Sandwich', 'ग्रिल्ड सैंडविच', '1 sandwich (150 g)', 'Snack', 320, 10, 42, 12, 0.4, _tiffin, CookStyle.tawa),
+  _f('Cheese Sandwich', 'चीज़ सैंडविच', '1 sandwich (130 g)', 'Snack', 350, 12, 38, 16, 0.2, _tiffin, CookStyle.tawa),
+  _f('Paneer Sandwich', 'पनीर सैंडविच', '1 sandwich (150 g)', 'Snack', 350, 14, 40, 14, 0.3, _tiffin, CookStyle.tawa),
+  _f('Corn Cheese Sandwich', 'कॉर्न चीज़ सैंडविच', '1 sandwich (150 g)', 'Snack', 380, 12, 44, 17, 0.3, _tiffin, CookStyle.tawa),
+  _f('Cucumber Sandwich', 'खीरा सैंडविच', '2 slices (100 g)', 'Snack', 220, 6, 34, 6, 0.2, _tiffin, CookStyle.tawa),
+  _f('Club Sandwich Veg', 'वेज क्लब सैंडविच', '1 sandwich (220 g)', 'Snack', 420, 13, 55, 16, 0.4, _tiffin, CookStyle.tawa),
+  _f('Bread Pakora', 'ब्रेड पकौड़ा', '1 piece (100 g)', 'Snack', 250, 6, 32, 11, 0.8, _fry, CookStyle.deep),
+  _f('Burger Aloo Tikki', 'आलू टिक्की बर्गर', '1 burger (180 g)', 'Snack', 400, 9, 57, 15, 0.6, _fry, CookStyle.shallow),
+  _f('Veg Burger', 'वेज बर्गर', '1 burger (180 g)', 'Snack', 380, 10, 50, 15, 0.5, _fry, CookStyle.shallow),
+
+  // ── Chaat & street snacks
+  _f('Aloo Tikki', 'आलू टिक्की', '2 pieces (120 g)', 'Snack', 240, 4, 38, 8, 0.8, _fry, CookStyle.shallow),
+  _f('Aloo Tikki Chaat', 'आलू टिक्की चाट', '1 plate (200 g)', 'Snack', 330, 8, 48, 12, 0.6, _fry, CookStyle.shallow),
+  _f('Dahi Bhalla', 'दही भल्ला', '2 pieces (180 g)', 'Snack', 280, 9, 38, 9, 0.4, _fry, CookStyle.deep),
+  _f('Papdi Chaat', 'पापड़ी चाट', '1 plate (180 g)', 'Snack', 320, 7, 45, 13, 0.5, _raw),
+  _f('Sev Puri', 'सेव पूरी', '1 plate (150 g)', 'Snack', 280, 6, 38, 12, 0.3, _raw),
+  _f('Dahi Puri', 'दही पूरी', '6 pieces', 'Snack', 300, 7, 43, 11, 0.4, _raw),
+  _f('Ragda Pattice', 'रगड़ा पेटिस', '1 plate (250 g)', 'Snack', 350, 10, 55, 10, 0.5, _fry, CookStyle.shallow),
+  _f('Samosa Chaat', 'समोसा चाट', '1 plate (200 g)', 'Snack', 380, 9, 52, 16, 0.5, _fry, CookStyle.deep),
+  _f('Chana Chaat', 'चना चाट', '1 bowl (180 g)', 'Snack', 240, 10, 38, 5, 0.2, _raw),
+  _f('Sprouts Chaat', 'स्प्राउट्स चाट', '1 bowl (180 g)', 'Snack', 160, 9, 27, 2, 0, _raw),
+  _f('Sweet Corn Chaat', 'स्वीट कॉर्न चाट', '1 bowl (150 g)', 'Snack', 180, 5, 32, 4, 0.2, _raw),
+  _f('Masala Corn', 'मसाला कॉर्न', '1 cup (150 g)', 'Snack', 170, 5, 30, 4, 0.2, _raw),
+  _f('Fruit Chaat', 'फ्रूट चाट', '1 bowl (200 g)', 'Snack', 140, 2, 34, 1, 0, _raw),
+
+  // ── More Indian fried snacks
+  _f('Aloo Bonda', 'आलू बोंडा', '2 pieces (120 g)', 'Snack', 300, 5, 40, 13, 0.8, _fry, CookStyle.deep),
+  _f('Onion Bhaji', 'प्याज़ भजिया', '4 pieces (100 g)', 'Snack', 260, 6, 32, 12, 0.8, _fry, CookStyle.deep),
+  _f('Mirchi Bajji', 'मिर्ची बज्जी', '2 pieces (100 g)', 'Snack', 240, 5, 30, 11, 0.8, _fry, CookStyle.deep),
+  _f('Moong Dal Pakora', 'मूंग दाल पकौड़ा', '5 pieces (100 g)', 'Snack', 280, 10, 32, 12, 0.8, _fry, CookStyle.deep),
+  _f('Palak Pakora', 'पालक पकौड़ा', '5 pieces (100 g)', 'Snack', 250, 6, 30, 11, 0.8, _fry, CookStyle.deep),
+  _f('Paneer Pakora', 'पनीर पकौड़ा', '4 pieces (120 g)', 'Snack', 350, 14, 30, 19, 0.8, _fry, CookStyle.deep),
+  _f('Dabeli', 'दाबेली', '1 piece', 'Snack', 300, 7, 45, 10, 0.4, _tiffin, CookStyle.home),
+  _f('Khaman', 'खमन', '1 plate (150 g)', 'Snack', 220, 9, 32, 6, 0.2, _steam),
+  _f('Khandvi', 'खंडवी', '1 plate (100 g)', 'Snack', 180, 6, 22, 7, 0.2, _steam),
+  _f('Fafda', 'फाफड़ा', '1 serving (100 g)', 'Snack', 400, 10, 48, 19, 0.8, _fry, CookStyle.deep),
+  _f('Muthiya', 'मुठिया', '1 serving (150 g)', 'Snack', 260, 8, 38, 8, 0.4, _tiffin, CookStyle.home),
+  _f('Handvo', 'हांडवो', '1 piece (150 g)', 'Snack', 280, 9, 38, 10, 0.4, _tiffin, CookStyle.home),
+  _f('Sabudana Vada', 'साबूदाना वड़ा', '2 pieces (120 g)', 'Snack', 320, 3, 48, 13, 0.8, _fry, CookStyle.deep),
+  _f('Thayir Vadai', 'दही वड़ा', '2 pieces (180 g)', 'Snack', 280, 9, 38, 9, 0.4, _fry, CookStyle.deep),
+  _f('Pazham Pori', 'पजहं पोरी', '2 pieces (120 g)', 'Snack', 300, 4, 45, 12, 0.8, _fry, CookStyle.deep),
+
+  // ── Regional & baked snacks
+  _f('Momos Veg Steamed', 'वेज मोमोज', '6 pieces (180 g)', 'Snack', 240, 7, 42, 4, 0.1, _steam),
+  _f('Momos Veg Fried', 'फ्राइड वेज मोमोज', '6 pieces (180 g)', 'Snack', 340, 7, 44, 14, 0.7, _fry, CookStyle.deep),
+  _f('Spring Roll Veg', 'वेज स्प्रिंग रोल', '2 pieces (120 g)', 'Snack', 300, 6, 38, 14, 0.8, _fry, CookStyle.deep),
+  _f('Dhokla Sandwich', 'ढोकला सैंडविच', '1 serving (150 g)', 'Snack', 240, 8, 35, 7, 0.2, _steam),
+  _f('Khari Biscuit', 'खारी बिस्कुट', '2 pieces (40 g)', 'Snack', 200, 3, 23, 10, 0, _raw),
+  _f('Namak Pare', 'नमक पारे', '30 g', 'Snack', 150, 3, 20, 7, 0.5, _fry, CookStyle.deep),
+  _f('Mathri', 'मठरी', '2 pieces (40 g)', 'Snack', 180, 3, 22, 9, 0.5, _fry, CookStyle.deep),
+  _f('Chakli', 'चकली', '30 g', 'Snack', 150, 3, 18, 7, 0.5, _fry, CookStyle.deep),
+  _f('Sev Namkeen', 'सेव नमकीन', '30 g', 'Snack', 170, 5, 14, 11, 0.2, _raw),
+  _f('Aloo Bhujia', 'आलू भुजिया', '30 g', 'Snack', 170, 3, 17, 10, 0.2, _raw),
+  _f('Murukku', 'मुरुक्कू', '30 g', 'Snack', 150, 3, 20, 7, 0.5, _fry, CookStyle.deep),
+  _f('Shakarpara', 'शकरपारा', '30 g', 'Snack', 150, 2, 22, 6, 0.5, _fry, CookStyle.deep),
+  _f('Khakhra Masala', 'मसाला खाखरा', '2 pieces (50 g)', 'Snack', 180, 5, 30, 5, 0.2, _raw),
+
+
 
   // ── Sweets & fruit
   _f('Gulab Jamun', 'गुलाब जामुन', '1 piece (40 g)', 'Sweet', 150, 2, 22, 6, 0, _raw),

@@ -6,7 +6,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
-String get _apiOrigin => dotenv.env['API_ORIGIN']?.trim() ?? '';
+/// Keeps URL building correct whether the configured Render URL ends in `/`
+/// or not. Render can take a few seconds to wake a sleeping instance.
+String get _apiOrigin =>
+    (dotenv.env['API_ORIGIN']?.trim() ?? '').replaceFirst(RegExp(r'/+$'), '');
 String get _googleWebClientId => dotenv.env['GOOGLE_WEB_CLIENT_ID']?.trim() ?? '';
 
 class AuthState extends ChangeNotifier {
@@ -29,7 +32,9 @@ class AuthState extends ChangeNotifier {
   String get apiOrigin => _apiOrigin;
 
   Future<void> initialize() async {
-    await _checkBackend();
+    // Do not make first app paint wait for a Render cold start. The status
+    // refresh notifies the login UI as soon as the service becomes reachable.
+    _refreshBackendStatus();
     final savedToken = await _storage.read(key: 'jwt_token');
     if (savedToken != null) {
       token = savedToken;
@@ -42,6 +47,18 @@ class AuthState extends ChangeNotifier {
       }
     }
     initialized = true;
+    notifyListeners();
+  }
+
+  Future<void> _refreshBackendStatus() async {
+    await _checkBackend();
+    notifyListeners();
+    if (backendOnline) return;
+
+    // Free/idle Render services sometimes need more than one connection
+    // attempt before their public endpoint is ready.
+    await Future<void>.delayed(const Duration(seconds: 5));
+    await _checkBackend();
     notifyListeners();
   }
 
@@ -160,8 +177,15 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> _checkBackend() async {
+    if (_apiOrigin.isEmpty) {
+      backendOnline = false;
+      return;
+    }
     try {
-      final response = await http.get(Uri.parse('$_apiOrigin/health')).timeout(const Duration(seconds: 4));
+      final response = await http
+          .get(Uri.parse('$_apiOrigin/health'))
+          // Render may need a few seconds to wake after an idle period.
+          .timeout(const Duration(seconds: 12));
       backendOnline = response.statusCode == 200;
     } catch (_) {
       backendOnline = false;
