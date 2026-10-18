@@ -87,23 +87,52 @@ class AppState extends ChangeNotifier {
         'reminders': reminders.map((entry) => entry.toJson()).toList(),
       };
 
-  /// Replaces local records with this signed-in user's cloud records.
-  Future<void> applyCloudSnapshot(Map<String, dynamic> cloud) async {
-    onboarded = cloud['onboarded'] == true;
+  /// Applies the cloud backup. During first sign-in, [preserveLocal] prevents
+  /// records created offline on this device from being erased by an older
+  /// server snapshot.
+  Future<void> applyCloudSnapshot(
+    Map<String, dynamic> cloud, {
+    bool preserveLocal = false,
+  }) async {
+    final hadLocalProfile = onboarded;
+    onboarded = preserveLocal
+        ? (onboarded || cloud['onboarded'] == true)
+        : cloud['onboarded'] == true;
     final remoteProfile = cloud['profile'];
-    if (remoteProfile is Map<String, dynamic> && remoteProfile.isNotEmpty) {
+    if (remoteProfile is Map<String, dynamic> &&
+        remoteProfile.isNotEmpty &&
+        (!preserveLocal || !hadLocalProfile)) {
       profile = Profile.fromJson(remoteProfile);
     }
-    diet = _maps(cloud['diet']).map(DietEntry.fromJson).toList();
-    workouts = _maps(cloud['workouts']).map(WorkoutEntry.fromJson).toList();
-    weightLogs = _maps(cloud['weightLogs']).map(WeightEntry.fromJson).toList();
-    customFoods = _maps(cloud['customFoods']).map(_customFoodFromJson).toList();
-    reminders = _maps(cloud['reminders']).map(Reminder.fromJson).toList();
+    final remoteDiet = _maps(cloud['diet']).map(DietEntry.fromJson).toList();
+    final remoteWorkouts = _maps(cloud['workouts']).map(WorkoutEntry.fromJson).toList();
+    final remoteWeights = _maps(cloud['weightLogs']).map(WeightEntry.fromJson).toList();
+    final remoteFoods = _maps(cloud['customFoods']).map(_customFoodFromJson).toList();
+    final remoteReminders = _maps(cloud['reminders']).map(Reminder.fromJson).toList();
+
+    if (preserveLocal) {
+      diet = _mergeByKey(remoteDiet, diet, (entry) => entry.id);
+      workouts = _mergeByKey(remoteWorkouts, workouts, (entry) => entry.id);
+      weightLogs = _mergeByKey(remoteWeights, weightLogs,
+          (entry) => '${entry.date.year}-${entry.date.month}-${entry.date.day}')
+        ..sort((a, b) => a.date.compareTo(b.date));
+      customFoods = _mergeByKey(remoteFoods, customFoods,
+          (food) => food.name.trim().toLowerCase());
+      reminders = _mergeByKey(remoteReminders, reminders, (entry) => entry.id);
+    } else {
+      diet = remoteDiet;
+      workouts = remoteWorkouts;
+      weightLogs = remoteWeights;
+      customFoods = remoteFoods;
+      reminders = remoteReminders;
+    }
     await Future.wait([
       _saveProfile(), _saveDiet(), _saveWorkouts(), _saveWeightLogs(),
       _saveCustomFoods(), _saveReminders(),
     ]);
     await _prefs.setBool('onboarded', onboarded);
+    // Cloud-only alerts must be scheduled on this device after a sign-in too.
+    await NotificationService.instance.rescheduleAll(reminders);
     notifyListeners();
   }
 
@@ -111,6 +140,23 @@ class AppState extends ChangeNotifier {
       .whereType<Map>()
       .map((item) => Map<String, dynamic>.from(item))
       .toList();
+
+  /// Local values are placed last deliberately: a freshly saved device value
+  /// wins when it has the same identity as a stale cloud value.
+  List<T> _mergeByKey<T>(
+    List<T> remote,
+    List<T> local,
+    Object Function(T item) key,
+  ) {
+    final merged = <Object, T>{};
+    for (final item in remote) {
+      merged[key(item)] = item;
+    }
+    for (final item in local) {
+      merged[key(item)] = item;
+    }
+    return merged.values.toList();
+  }
 
   // ── date
   void selectDate(DateTime d) {

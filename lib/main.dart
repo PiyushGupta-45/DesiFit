@@ -170,6 +170,11 @@ class _CloudSession extends StatefulWidget {
 class _CloudSessionState extends State<_CloudSession> {
   Timer? _uploadTimer;
   bool _readyToUpload = false;
+  // A person can start using the app before the first cloud download finishes.
+  // Keep their changes (especially a just-added daily weight) from being
+  // overwritten by an older server snapshot that arrives a moment later.
+  bool _initialSyncInProgress = true;
+  bool _localChangedDuringInitialSync = false;
   bool _catalogFetching = false;
   bool _catalogFetched = false;
   late final AppState _app;
@@ -201,14 +206,29 @@ class _CloudSessionState extends State<_CloudSession> {
           (remote['profile'] is Map && (remote['profile'] as Map).isNotEmpty) ||
               ((remote['diet'] as List?)?.isNotEmpty ?? false) ||
               ((remote['workouts'] as List?)?.isNotEmpty ?? false) ||
-              ((remote['weightLogs'] as List?)?.isNotEmpty ?? false);
-      if (hasCloudData) {
-        await _app.applyCloudSnapshot(remote);
+              ((remote['weightLogs'] as List?)?.isNotEmpty ?? false) ||
+              ((remote['customFoods'] as List?)?.isNotEmpty ?? false) ||
+              ((remote['reminders'] as List?)?.isNotEmpty ?? false);
+      if (_localChangedDuringInitialSync) {
+        // The device has newer data than the snapshot we requested at launch.
+        // Upload it instead of replacing it with that stale snapshot.
+        await _auth.uploadCloudData(_app.cloudSnapshot());
+      } else if (hasCloudData) {
+        // Initial sync is a merge, not a replacement. A stale cloud document
+        // must never make today's weight or locally-created alerts disappear.
+        await _app.applyCloudSnapshot(remote, preserveLocal: true);
+        await _auth.uploadCloudData(_app.cloudSnapshot());
+        // Applying the downloaded snapshot notifies AppState listeners; it is
+        // not a user edit and must not be treated as one.
+        _localChangedDuringInitialSync = false;
       } else {
         await _auth.uploadCloudData(_app.cloudSnapshot());
       }
-      _readyToUpload = true;
     }
+    if (!mounted) return;
+    _initialSyncInProgress = false;
+    _readyToUpload = true;
+    if (_localChangedDuringInitialSync) _queueUpload();
   }
 
   void _refreshCatalogueWhenOnline() {
@@ -227,7 +247,10 @@ class _CloudSessionState extends State<_CloudSession> {
   }
 
   void _queueUpload() {
-    if (!_readyToUpload) return;
+    if (!_readyToUpload) {
+      if (_initialSyncInProgress) _localChangedDuringInitialSync = true;
+      return;
+    }
     _uploadTimer?.cancel();
     _uploadTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
