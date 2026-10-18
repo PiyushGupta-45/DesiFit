@@ -10,37 +10,47 @@ class C {
   static bool get isLight => _light;
   static void setLight(bool value) => _light = value;
 
+  // Dark: midnight-ocean glass. Light: warm paper with sunny colour.
+  // This intentionally uses different palettes, not a washed-out dark theme.
   static Color get bg1 =>
-      _light ? const Color(0xFFF4F7FC) : const Color(0xFF071522);
+      _light ? const Color(0xFFFFF8F0) : const Color(0xFF070A18);
   static Color get bg2 =>
-      _light ? const Color(0xFFDDEAF7) : const Color(0xFF102B3F);
-  static Color get saffron => const Color(0xFFFFB84D);
-  static Color get flame => const Color(0xFFFF647C);
-  static Color get magenta => const Color(0xFFF05A9D);
-  static Color get violet => const Color(0xFF7377E8);
-  static Color get mint => const Color(0xFF20C7B2);
-  static Color get sky => const Color(0xFF4BAAFF);
+      _light ? const Color(0xFFFCE3CD) : const Color(0xFF111B38);
+  static Color get surface =>
+      _light ? const Color(0xFFFFFCF8) : const Color(0xFF17244A);
+  static Color get saffron => _light ? const Color(0xFFF59E0B) : const Color(0xFFFFCB5B);
+  static Color get flame => _light ? const Color(0xFFEA5B54) : const Color(0xFFFF718D);
+  static Color get magenta => _light ? const Color(0xFFD84A8B) : const Color(0xFFFF78B9);
+  static Color get violet => _light ? const Color(0xFF5967D8) : const Color(0xFF8994FF);
+  static Color get mint => _light ? const Color(0xFF078B82) : const Color(0xFF42D9C4);
+  static Color get sky => _light ? const Color(0xFF238BDB) : const Color(0xFF45C7FF);
   static Color get text =>
-      _light ? const Color(0xFF172B40) : const Color(0xFFF2F7FF);
+      _light ? const Color(0xFF26324A) : const Color(0xFFF4F7FF);
   static Color get textDim =>
-      _light ? const Color(0xB3172B40) : const Color(0xB3F2F7FF);
+      _light ? const Color(0xB326324A) : const Color(0xB3DDE7FF);
   static Color get textFaint =>
-      _light ? const Color(0x80172B40) : const Color(0x80F2F7FF);
+      _light ? const Color(0x8026324A) : const Color(0x80DDE7FF);
 
   static LinearGradient get heroGradient => LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: _light ? [violet, sky] : [saffron, flame, magenta],
+        colors: _light
+            ? [const Color(0xFFEF7659), const Color(0xFFF6B73C)]
+            : [const Color(0xFF6277FF), const Color(0xFF38C8FF)],
       );
   static LinearGradient get mintGradient => LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [mint, sky],
+        colors: _light
+            ? [const Color(0xFF04A999), const Color(0xFF3E9EF0)]
+            : [const Color(0xFF28CDB4), const Color(0xFF45C7FF)],
       );
   static LinearGradient get violetGradient => LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [violet, magenta],
+        colors: _light
+            ? [const Color(0xFF6272DA), const Color(0xFFD95C9B)]
+            : [const Color(0xFF7E87FF), const Color(0xFFFF74B0)],
       );
 }
 
@@ -87,7 +97,7 @@ class _AuroraBackgroundState extends State<AuroraBackground>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(colors: [
-              color.withValues(alpha: 0.75),
+              color.withValues(alpha: C.isLight ? 0.30 : 0.48),
               color.withValues(alpha: 0.0),
             ]),
           ),
@@ -211,15 +221,15 @@ class GlassCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withValues(
-                      alpha: (C.isLight ? 0.72 : 0.17) * strength),
-                  (C.isLight ? C.bg2 : Colors.white).withValues(
-                      alpha: (C.isLight ? 0.44 : 0.05) * strength),
+                  (C.isLight ? Colors.white : C.surface)
+                      .withValues(alpha: (C.isLight ? 0.88 : 0.88) * strength),
+                  (C.isLight ? C.bg2 : C.bg2)
+                      .withValues(alpha: (C.isLight ? 0.48 : 0.64) * strength),
                 ],
               ),
           border: Border.all(
-              color: (C.isLight ? C.violet : Colors.white).withValues(
-                  alpha: (C.isLight ? 0.16 : 0.20) * strength)),
+              color: (C.isLight ? C.saffron : C.sky).withValues(
+                  alpha: (C.isLight ? 0.24 : 0.28) * strength)),
           boxShadow: C.isLight
               ? [
                   BoxShadow(
@@ -469,8 +479,8 @@ Future<T?> showGlassSheet<T>(BuildContext context, WidgetBuilder builder) {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFF2A1B5C).withValues(alpha: 0.78),
-                      const Color(0xFF120C2E).withValues(alpha: 0.92),
+                      C.surface.withValues(alpha: C.isLight ? 0.98 : 0.96),
+                      C.bg2.withValues(alpha: C.isLight ? 0.98 : 0.96),
                     ],
                   ),
                 ),

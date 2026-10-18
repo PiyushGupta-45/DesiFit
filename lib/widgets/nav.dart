@@ -43,16 +43,16 @@ class LiquidNavBar extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [
                     C.isLight
-                        ? Colors.white.withValues(alpha: 0.88)
-                        : const Color(0xFF09263A).withValues(alpha: 0.90),
+                        ? Colors.white.withValues(alpha: 0.94)
+                        : C.surface.withValues(alpha: 0.94),
                     C.isLight
-                        ? C.bg2.withValues(alpha: 0.76)
-                        : const Color(0xFF061A2B).withValues(alpha: 0.82),
+                        ? C.bg2.withValues(alpha: 0.82)
+                        : C.bg2.withValues(alpha: 0.88),
                   ],
                 ),
                 border: Border.all(
-                    color: (C.isLight ? C.sky : C.mint)
-                        .withValues(alpha: C.isLight ? 0.22 : 0.30)),
+                    color: (C.isLight ? C.saffron : C.sky)
+                        .withValues(alpha: C.isLight ? 0.34 : 0.38)),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black.withValues(alpha: C.isLight ? 0.10 : 0.25),
