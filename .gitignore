@@ -35,6 +35,7 @@ migrate_working_dir/
 
 # Public Flutter build configuration. Keep local endpoints and OAuth IDs out of git.
 /config/app.env
+/backend/.env
 
 # Symbolication related
 app.*.symbols

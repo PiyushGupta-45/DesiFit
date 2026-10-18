@@ -11,5 +11,6 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  adminFoodKey: process.env.ADMIN_FOOD_KEY || '',
   corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((value) => value.trim()),
 };

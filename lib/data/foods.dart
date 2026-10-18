@@ -49,6 +49,47 @@ class FoodItem {
     this.weightBased = false,
   });
 
+  /// Wire format used by the global MongoDB food catalogue.
+  factory FoodItem.fromCatalogJson(Map<String, dynamic> json) {
+    final parsedStyles = (json['styles'] as List? ?? const [])
+        .map(_styleFromWire)
+        .whereType<CookStyle>()
+        .toList();
+    final styles = parsedStyles.isEmpty ? <CookStyle>[CookStyle.plain] : parsedStyles;
+    final defaultStyle = _styleFromWire(json['defaultStyle']) ?? styles.first;
+    return FoodItem(
+      name: json['name']?.toString().trim().isNotEmpty == true
+          ? json['name'].toString().trim()
+          : 'Unnamed food',
+      hindi: json['hindi']?.toString() ?? '',
+      unit: json['unit']?.toString() ?? '1 serving',
+      cat: json['cat']?.toString() ?? 'Other',
+      kcal: (json['kcal'] as num?)?.toDouble() ?? 0,
+      p: (json['p'] as num?)?.toDouble() ?? 0,
+      c: (json['c'] as num?)?.toDouble() ?? 0,
+      f: (json['f'] as num?)?.toDouble() ?? 0,
+      oil: (json['oil'] as num?)?.toDouble() ?? 0,
+      styles: styles,
+      defaultStyle: styles.contains(defaultStyle) ? defaultStyle : styles.first,
+      weightBased: json['weightBased'] == true,
+    );
+  }
+
+  Map<String, dynamic> toCatalogJson() => {
+        'name': name,
+        'hindi': hindi,
+        'unit': unit,
+        'cat': cat,
+        'kcal': kcal,
+        'p': p,
+        'c': c,
+        'f': f,
+        'oil': oil,
+        'styles': styles.map((style) => style.name).toList(),
+        'defaultStyle': defaultStyle.name,
+        'weightBased': weightBased,
+      };
+
   /// Nutrition for [qty] servings cooked in [style].
   Nutrition calc(double qty, CookStyle style) {
     final extraFat = style.fat * oil;
@@ -59,6 +100,14 @@ class FoodItem {
       (f + extraFat) * qty,
     );
   }
+}
+
+CookStyle? _styleFromWire(dynamic value) {
+  final name = value?.toString();
+  for (final style in CookStyle.values) {
+    if (style.name == name) return style;
+  }
+  return null;
 }
 
 const _veg = [CookStyle.home, CookStyle.tadka, CookStyle.restaurant, CookStyle.plain];
@@ -335,7 +384,11 @@ final List<FoodItem> indianFoods = [
 ];
 
 List<FoodItem> searchFoods(String q, {List<FoodItem> extra = const []}) {
-  final all = [...extra, ...indianFoods];
+  // Remote catalogue entries win over offline defaults with the same name.
+  final seen = <String>{};
+  final all = [...extra, ...indianFoods]
+      .where((food) => seen.add(food.name.trim().toLowerCase()))
+      .toList();
   final s = q.trim().toLowerCase();
   if (s.isEmpty) return all;
   return all

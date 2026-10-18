@@ -17,6 +17,36 @@ Node.js API for email/password login, Google Sign-In, JWT authentication and per
 
 Health check: `GET http://localhost:8080/health`
 
+## Global food catalogue
+
+The app has an offline built-in food list, plus a MongoDB-backed global
+catalogue. Apps fetch `GET /api/v1/foods` after sign-in and cache the result,
+so foods added to this API appear without an APK update.
+
+On every production start, `npm start` safely imports any *new* `_f(...)`
+entry from `lib/data/foods.dart` into MongoDB. Existing database foods are not
+overwritten. Therefore, a newly committed static food is inserted on the next
+Render deploy; later catalogue-only additions can use the admin API below.
+
+Set a separate, long random `ADMIN_FOOD_KEY` in the server/Render environment.
+Never place it in Flutter's `config/app.env`.
+
+| Method | URL | Access |
+| --- | --- | --- |
+| GET | `/api/v1/foods` | Public app catalogue fetch |
+| POST | `/api/v1/foods` | `x-admin-food-key` required; creates or updates by name |
+| PATCH | `/api/v1/foods/:id` | `x-admin-food-key` required |
+| DELETE | `/api/v1/foods/:id` | `x-admin-food-key` required; deactivates the food |
+
+Example admin request:
+
+```bash
+curl -X POST https://YOUR-API.onrender.com/api/v1/foods \
+  -H "Content-Type: application/json" \
+  -H "x-admin-food-key: YOUR_ADMIN_FOOD_KEY" \
+  -d '{"name":"Oats Chilla","hindi":"ओट्स चीला","unit":"1 medium (80 g)","cat":"Tiffin","kcal":160,"p":7,"c":24,"f":4,"oil":0.5,"styles":["tawa","home"],"defaultStyle":"tawa"}'
+```
+
 ## Auth API
 
 | Method | URL | Body |

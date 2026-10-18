@@ -249,8 +249,10 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   // ── search list
   Widget _search() {
-    final customFoods = context.watch<AppState>().customFoods;
-    var list = searchFoods(query, extra: customFoods);
+    final app = context.watch<AppState>();
+    final customFoods = app.customFoods;
+    final remoteFoods = app.catalogFoods;
+    var list = searchFoods(query, extra: [...customFoods, ...remoteFoods]);
     if (cat != 'All') list = list.where((f) => f.cat == cat).toList();
     return Column(
       key: const ValueKey('search'),
@@ -260,7 +262,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           child: Row(children: [
             Text('Add food', style: t(22, w: FontWeight.w800)),
             const Spacer(),
-            Text('${indianFoods.length + customFoods.length} saved foods',
+            Text('${searchFoods('', extra: [...customFoods, ...remoteFoods]).length} saved foods',
                 style: t(12.5, color: C.textFaint)),
           ]),
         ),

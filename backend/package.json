@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "seed:foods": "node scripts/seed-foods-from-dart.js",
+    "start": "node scripts/seed-foods-from-dart.js && node src/server.js"
   },
   "engines": {
     "node": ">=20"

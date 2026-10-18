@@ -18,6 +18,9 @@ class AppState extends ChangeNotifier {
   Profile profile = Profile();
   bool onboarded = false;
   List<DietEntry> diet = [];
+  /// Global foods downloaded from the backend. Built-in foods remain an
+  /// offline fallback while this catalogue is refreshed in the background.
+  List<FoodItem> catalogFoods = [];
   List<FoodItem> customFoods = [];
   List<WorkoutEntry> workouts = [];
   List<WeightEntry> weightLogs = [];
@@ -35,6 +38,9 @@ class AppState extends ChangeNotifier {
     diet = decodeList(_prefs.getString('diet')).map(DietEntry.fromJson).toList();
     customFoods = decodeList(_prefs.getString('custom_foods'))
         .map(_customFoodFromJson)
+        .toList();
+    catalogFoods = decodeList(_prefs.getString('catalog_foods'))
+        .map(FoodItem.fromCatalogJson)
         .toList();
     workouts = decodeList(_prefs.getString('workouts'))
         .map(WorkoutEntry.fromJson)
@@ -61,6 +67,8 @@ class AppState extends ChangeNotifier {
       _prefs.setString('diet', encodeList(diet.map((e) => e.toJson()).toList()));
   Future<void> _saveCustomFoods() => _prefs.setString('custom_foods',
       encodeList(customFoods.map(_customFoodToJson).toList()));
+  Future<void> _saveCatalogFoods() => _prefs.setString(
+      'catalog_foods', encodeList(catalogFoods.map((food) => food.toCatalogJson()).toList()));
   Future<void> _saveWorkouts() => _prefs.setString(
       'workouts', encodeList(workouts.map((e) => e.toJson()).toList()));
   Future<void> _saveWeightLogs() => _prefs.setString(
@@ -182,6 +190,14 @@ class AppState extends ChangeNotifier {
         item.name.trim().toLowerCase() == food.name.trim().toLowerCase());
     customFoods.insert(0, food);
     _saveCustomFoods();
+    notifyListeners();
+  }
+
+  /// Replaces the locally cached global food catalogue with the backend's
+  /// active list. The list is persisted so food search still works offline.
+  Future<void> replaceCatalogFoods(List<FoodItem> foods) async {
+    catalogFoods = foods;
+    await _saveCatalogFoods();
     notifyListeners();
   }
 

@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 import 'auth/auth_state.dart';
+import 'data/foods.dart';
 import 'screens/auth_screen.dart';
 import 'screens/diet_screen.dart';
 import 'screens/goals_screen.dart';
@@ -29,7 +30,6 @@ Future<void> main() async {
   final state = AppState();
   await state.load();
   final auth = AuthState();
-  await auth.initialize();
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: state),
@@ -37,6 +37,9 @@ Future<void> main() async {
     ],
     child: const DesiFitApp(),
   ));
+  // Start network work only after Flutter has been handed its first frame.
+  // The splash must never wait for a slow/offline backend or Render cold start.
+  unawaited(auth.initialize());
 }
 
 class DesiFitApp extends StatelessWidget {
@@ -167,6 +170,8 @@ class _CloudSession extends StatefulWidget {
 class _CloudSessionState extends State<_CloudSession> {
   Timer? _uploadTimer;
   bool _readyToUpload = false;
+  bool _catalogFetching = false;
+  bool _catalogFetched = false;
   late final AppState _app;
   late final AuthState _auth;
 
@@ -177,28 +182,48 @@ class _CloudSessionState extends State<_CloudSession> {
     _auth = context.read<AuthState>();
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
     _app.addListener(_queueUpload);
+    _auth.addListener(_refreshCatalogueWhenOnline);
   }
 
   @override
   void dispose() {
     _app.removeListener(_queueUpload);
+    _auth.removeListener(_refreshCatalogueWhenOnline);
     _uploadTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _sync() async {
+    _refreshCatalogueWhenOnline();
     final remote = await _auth.downloadCloudData();
-    if (!mounted || remote == null) return;
-    final hasCloudData = (remote['profile'] is Map && (remote['profile'] as Map).isNotEmpty) ||
-        ((remote['diet'] as List?)?.isNotEmpty ?? false) ||
-        ((remote['workouts'] as List?)?.isNotEmpty ?? false) ||
-        ((remote['weightLogs'] as List?)?.isNotEmpty ?? false);
-    if (hasCloudData) {
-      await _app.applyCloudSnapshot(remote);
-    } else {
-      await _auth.uploadCloudData(_app.cloudSnapshot());
+    if (mounted && remote != null) {
+      final hasCloudData =
+          (remote['profile'] is Map && (remote['profile'] as Map).isNotEmpty) ||
+              ((remote['diet'] as List?)?.isNotEmpty ?? false) ||
+              ((remote['workouts'] as List?)?.isNotEmpty ?? false) ||
+              ((remote['weightLogs'] as List?)?.isNotEmpty ?? false);
+      if (hasCloudData) {
+        await _app.applyCloudSnapshot(remote);
+      } else {
+        await _auth.uploadCloudData(_app.cloudSnapshot());
+      }
+      _readyToUpload = true;
     }
-    _readyToUpload = true;
+  }
+
+  void _refreshCatalogueWhenOnline() {
+    if (!_auth.backendOnline || _catalogFetching || _catalogFetched) return;
+    unawaited(_downloadCatalogue());
+  }
+
+  Future<void> _downloadCatalogue() async {
+    _catalogFetching = true;
+    final foods = await _auth.downloadFoodCatalog();
+    if (mounted && foods != null) {
+      await _app.replaceCatalogFoods(foods.map(FoodItem.fromCatalogJson).toList());
+      _catalogFetched = true;
+    }
+    _catalogFetching = false;
   }
 
   void _queueUpload() {

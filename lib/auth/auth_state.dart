@@ -120,6 +120,25 @@ class AuthState extends ChangeNotifier {
     return null;
   }
 
+  /// Public global food catalogue. It is deliberately independent from a
+  /// user's data document, so catalogue updates reach every signed-in app.
+  Future<List<Map<String, dynamic>>?> downloadFoodCatalog() async {
+    if (!backendOnline || _apiOrigin.isEmpty) return null;
+    try {
+      final response = await http
+          .get(Uri.parse('$_apiOrigin/api/v1/foods'))
+          .timeout(const Duration(seconds: 15));
+      final body = _json(response);
+      if (response.statusCode != 200 || body['foods'] is! List) return null;
+      return (body['foods'] as List)
+          .whereType<Map>()
+          .map((food) => Map<String, dynamic>.from(food))
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<bool> uploadCloudData(Map<String, dynamic> snapshot) async {
     if (!signedIn || !backendOnline) return false;
     try {

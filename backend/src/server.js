@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { config } from './config.js';
 import authRoutes from './routes/auth.js';
 import dataRoutes from './routes/data.js';
+import foodsRoutes from './routes/foods.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -15,6 +16,7 @@ app.use(cors({ origin: config.corsOrigins.includes('*') ? true : config.corsOrig
 app.use(express.json({ limit: '1mb' }));
 app.use('/api/v1/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true }), authRoutes);
 app.use('/api/v1/data', dataRoutes);
+app.use('/api/v1/foods', foodsRoutes);
 app.get('/health', (_, res) => res.json({ ok: true }));
 
 app.use((_, res) => res.status(404).json({ error: 'Route not found.' }));
