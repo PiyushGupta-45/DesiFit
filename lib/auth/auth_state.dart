@@ -122,7 +122,15 @@ class AuthState extends ChangeNotifier {
 
   /// Public global food catalogue. It is deliberately independent from a
   /// user's data document, so catalogue updates reach every signed-in app.
-  Future<List<Map<String, dynamic>>?> downloadFoodCatalog() async {
+  Future<List<Map<String, dynamic>>?> downloadFoodCatalog({
+    bool refreshConnection = false,
+  }) async {
+    // A manual catalogue refresh should not be blocked by an old offline
+    // status left over from a Render cold start.
+    if (refreshConnection) {
+      await _checkBackend();
+      notifyListeners();
+    }
     if (!backendOnline || _apiOrigin.isEmpty) return null;
     try {
       final response = await http

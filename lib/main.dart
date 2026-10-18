@@ -167,7 +167,8 @@ class _CloudSession extends StatefulWidget {
   State<_CloudSession> createState() => _CloudSessionState();
 }
 
-class _CloudSessionState extends State<_CloudSession> {
+class _CloudSessionState extends State<_CloudSession>
+    with WidgetsBindingObserver {
   Timer? _uploadTimer;
   bool _readyToUpload = false;
   // A person can start using the app before the first cloud download finishes.
@@ -183,6 +184,7 @@ class _CloudSessionState extends State<_CloudSession> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _app = context.read<AppState>();
     _auth = context.read<AuthState>();
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
@@ -192,10 +194,21 @@ class _CloudSessionState extends State<_CloudSession> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _app.removeListener(_queueUpload);
     _auth.removeListener(_refreshCatalogueWhenOnline);
     _uploadTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    // A Render deployment may have added foods while the app was open. Fetch
+    // again on return to foreground so a user never needs to reinstall just
+    // to see an updated public food catalogue.
+    _catalogFetched = false;
+    _refreshCatalogueWhenOnline();
   }
 
   Future<void> _sync() async {

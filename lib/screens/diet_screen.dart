@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../auth/auth_state.dart';
 import '../data/foods.dart';
 import '../models.dart';
 import '../state.dart';
@@ -259,6 +260,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   final _recipeName = TextEditingController();
   final _recipeYield = TextEditingController(text: '1');
   final List<_RecipeIngredient> _ingredients = [];
+  bool _refreshingCatalogue = false;
 
   static const cats = [
     'All', 'Bread', 'Rice', 'Dal', 'Sabzi', 'Non-veg', 'Tiffin', 'Snack',
@@ -290,6 +292,30 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         mode = _Mode.detail;
       });
 
+  Future<void> _refreshFoodCatalogue() async {
+    if (_refreshingCatalogue) return;
+    setState(() => _refreshingCatalogue = true);
+    final foods = await context
+        .read<AuthState>()
+        .downloadFoodCatalog(refreshConnection: true);
+    if (!mounted) return;
+    if (foods == null) {
+      setState(() => _refreshingCatalogue = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not refresh foods. Check your internet and backend.'),
+      ));
+      return;
+    }
+    await context.read<AppState>().replaceCatalogFoods(
+          foods.map(FoodItem.fromCatalogJson).toList(),
+        );
+    if (!mounted) return;
+    setState(() => _refreshingCatalogue = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${foods.length} foods saved for offline use.'),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height * 0.84;
@@ -318,12 +344,35 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       key: const ValueKey('search'),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+          padding: const EdgeInsets.fromLTRB(20, 16, 16, 10),
           child: Row(children: [
             Text('Add food', style: t(22, w: FontWeight.w800)),
             const Spacer(),
-            Text('${searchFoods('', extra: [...customFoods, ...remoteFoods]).length} saved foods',
-                style: t(12.5, color: C.textFaint)),
+            if (_refreshingCatalogue)
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.4, color: C.mint),
+              )
+            else
+              IconButton(
+                onPressed: _refreshFoodCatalogue,
+                tooltip: 'Refresh food database',
+                icon: Icon(Icons.sync_rounded, color: C.mint),
+              ),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+          child: Row(children: [
+            Expanded(child: Text(
+              '${searchFoods('', extra: [...customFoods, ...remoteFoods]).length} foods available offline',
+              style: t(12.5, color: C.textFaint),
+            )),
+            Pressable(
+              onTap: _refreshingCatalogue ? () {} : _refreshFoodCatalogue,
+              child: Text('Refresh foods', style: t(12.5, color: C.mint, w: FontWeight.w700)),
+            ),
           ]),
         ),
         Padding(
