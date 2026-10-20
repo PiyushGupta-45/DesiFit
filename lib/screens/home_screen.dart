@@ -25,7 +25,9 @@ class HomeScreen extends StatelessWidget {
     final n = s.totalsOn(today);
     final burned = s.burnedOn(today);
     final p = s.profile;
-    final remaining = p.calorieTarget - n.kcal + burned;
+    // Food target is based only on what was eaten. Exercise stays visible as
+    // its own metric and never increases the day's food allowance.
+    final remaining = p.calorieTarget - n.kcal;
     final over = remaining < 0;
     final hour = today.hour;
     final greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';

@@ -216,14 +216,27 @@ class _AmountLabel {
 enum _Mode { search, detail, custom }
 
 class _RecipeIngredient {
-  _RecipeIngredient(this.food, {String amount = '1'})
-      : amountController = TextEditingController(text: amount);
+  _RecipeIngredient(this.food)
+      : byWeight = food.weightBased,
+        amountController = TextEditingController(text: food.weightBased ? '100' : '1');
 
   final FoodItem food;
   final TextEditingController amountController;
+  bool byWeight;
 
   double get amount => double.tryParse(amountController.text.trim()) ?? 0;
-  double get servings => food.weightBased ? amount / 100 : amount;
+  double? get gramsPerServing {
+    if (food.weightBased) return 100;
+    final match = RegExp(r'(\d+(?:\.\d+)?)\s*g', caseSensitive: false)
+        .firstMatch(food.unit);
+    return match == null ? null : double.tryParse(match.group(1)!);
+  }
+
+  bool get canUseWeight => gramsPerServing != null;
+  double get servings => byWeight ? amount / (gramsPerServing ?? 100) : amount;
+  double get totalGrams => byWeight
+      ? amount
+      : amount * (gramsPerServing ?? 0);
   Nutrition get nutrition => food.calc(servings, food.defaultStyle);
 
   void dispose() => amountController.dispose();
@@ -764,8 +777,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       },
     );
     if (picked != null && mounted) {
-      setState(() => _ingredients.add(_RecipeIngredient(
-          picked, amount: picked.weightBased ? '100' : '1')));
+      setState(() => _ingredients.add(_RecipeIngredient(picked)));
     }
   }
 
@@ -861,27 +873,69 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   Widget _recipeIngredientRow(_RecipeIngredient ingredient, int index) {
     final food = ingredient.food;
     final n = ingredient.nutrition;
-    return GlassCard(radius: 20, padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
-      child: Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(food.name, style: t(14, w: FontWeight.w800)),
-          Text('${n.kcal.round()} kcal · P ${n.protein.toStringAsFixed(1)}g',
-              style: t(12, color: C.textDim)),
-        ])),
-        SizedBox(width: 92, child: TextField(
-          controller: ingredient.amountController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          textAlign: TextAlign.center, onChanged: (_) => setState(() {}),
-          style: t(15, w: FontWeight.w800),
-          decoration: InputDecoration(isDense: true,
-            suffixText: food.weightBased ? 'g' : '×',
-            suffixStyle: t(12, color: C.textDim),
-            border: UnderlineInputBorder(borderSide: BorderSide(color: C.textFaint))),
-        )),
-        IconButton(onPressed: () => setState(() {
-          final removed = _ingredients.removeAt(index); removed.dispose();
-        }), icon: Icon(Icons.close_rounded, color: C.flame, size: 20)),
-      ]));
+    final totalGrams = ingredient.totalGrams;
+    return GlassCard(
+      radius: 20,
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(food.name, style: t(14, w: FontWeight.w800)),
+            Text('${n.kcal.round()} kcal · P ${n.protein.toStringAsFixed(1)}g'
+                '${totalGrams > 0 ? ' · ${totalGrams.round()} g' : ''}',
+                style: t(12, color: C.textDim)),
+          ])),
+          IconButton(onPressed: () => setState(() {
+            final removed = _ingredients.removeAt(index);
+            removed.dispose();
+          }), icon: Icon(Icons.close_rounded, color: C.flame, size: 20)),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: GlassChip(
+            label: 'Per serving',
+            selected: !ingredient.byWeight,
+            activeGradient: C.violetGradient,
+            onTap: () => setState(() {
+              ingredient.byWeight = false;
+              ingredient.amountController.text = '1';
+            }),
+          )),
+          const SizedBox(width: 8),
+          Expanded(child: GlassChip(
+            label: 'By weight',
+            selected: ingredient.byWeight,
+            activeGradient: C.mintGradient,
+            onTap: ingredient.canUseWeight ? () => setState(() {
+              ingredient.byWeight = true;
+              ingredient.amountController.text =
+                  (ingredient.gramsPerServing ?? 100).round().toString();
+            }) : () {},
+          )),
+          const SizedBox(width: 10),
+          SizedBox(width: 86, child: TextField(
+            controller: ingredient.amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textAlign: TextAlign.center,
+            onChanged: (_) => setState(() {}),
+            style: t(15, w: FontWeight.w800),
+            decoration: InputDecoration(
+              isDense: true,
+              suffixText: ingredient.byWeight ? 'g' : '×',
+              suffixStyle: t(12, color: C.textDim),
+              border: UnderlineInputBorder(
+                  borderSide: BorderSide(color: C.textFaint)),
+            ),
+          )),
+        ]),
+        if (!ingredient.canUseWeight)
+          Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Text('Weight is unavailable because this preset has no gram serving size.',
+                style: t(11, color: C.textFaint)),
+          ),
+      ]),
+    );
   }
 
   Widget _recipeMacro(String label, double value) => Expanded(child: Column(children: [
