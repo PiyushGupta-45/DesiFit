@@ -116,9 +116,23 @@ class NotificationService {
   }
 
   Future<void> rescheduleAll(List<Reminder> all) async {
+    if (!supported) return;
+    await init();
+    // A reminder can have been removed from SharedPreferences/cloud while its
+    // old Android alarm still exists. Start from a clean slate so an empty
+    // reminder list truly means zero future DesiFit notifications.
+    await _plugin.cancelAll();
     for (final r in all) {
       await schedule(r);
     }
+  }
+
+  /// Clears every notification scheduled by this app, including orphaned
+  /// alarms left behind by an older build or a deleted reminder.
+  Future<void> clearAll() async {
+    if (!supported) return;
+    await init();
+    await _plugin.cancelAll();
   }
 
   Future<void> showTest() async {

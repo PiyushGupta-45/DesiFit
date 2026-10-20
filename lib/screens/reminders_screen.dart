@@ -131,6 +131,22 @@ class RemindersScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text('Tap a quick-add above to start.',
                     style: t(13, color: C.textDim)),
+                if (NotificationService.instance.supported) ...[
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () async {
+                      await NotificationService.instance.clearAll();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('All scheduled DesiFit notifications were cleared.'),
+                        ));
+                      }
+                    },
+                    icon: Icon(Icons.notifications_off_outlined, color: C.flame),
+                    label: Text('Clear old scheduled notifications',
+                        style: t(13, color: C.flame, w: FontWeight.w700)),
+                  ),
+                ],
               ]),
             ),
           )

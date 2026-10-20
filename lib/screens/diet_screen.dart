@@ -42,7 +42,7 @@ class DietScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Pressable(
-                onTap: () => showGlassSheet(context, (_) => const AddFoodSheet(recipeOnly: true)),
+                onTap: () => _openRecipeBuilder(context),
                 child: Text('✦ Make custom recipe', style: t(12, color: C.mint, w: FontWeight.w700)),
               ),
             ]),
@@ -73,8 +73,7 @@ class DietScreen extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
           child: Pressable(
-            onTap: () => showGlassSheet(
-                context, (_) => const AddFoodSheet(recipeOnly: true)),
+            onTap: () => _openRecipeBuilder(context),
             child: GlassCard(
               radius: 24,
               tint: C.violetGradient,
@@ -138,6 +137,12 @@ class DietScreen extends StatelessWidget {
         Text(v, style: t(30, w: FontWeight.w800, ls: -0.8)),
         Text('$label $sub', style: t(12.5, color: C.textDim)),
       ]);
+
+  void _openRecipeBuilder(BuildContext context, {FoodItem? recipe}) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => RecipeBuilderScreen(editingRecipe: recipe),
+    ));
+  }
 
   Widget _mini(String label, String v, Color c) => Column(children: [
         Text(v, style: t(17, w: FontWeight.w800, color: c)),
@@ -213,12 +218,37 @@ class _AmountLabel {
 
 // ───────────────────────────────────────────────────────────────────────────
 
+/// Full-page recipe workspace. A modal sheet is too cramped once a recipe has
+/// multiple ingredients and live nutrition values.
+class RecipeBuilderScreen extends StatelessWidget {
+  const RecipeBuilderScreen({super.key, this.editingRecipe});
+
+  final FoodItem? editingRecipe;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: C.bg1,
+        body: AuroraBackground(
+          child: SafeArea(
+            child: AddFoodSheet(
+              recipeOnly: true,
+              fullPage: true,
+              editingRecipe: editingRecipe,
+            ),
+          ),
+        ),
+      );
+}
+
 enum _Mode { search, detail, custom }
 
 class _RecipeIngredient {
   _RecipeIngredient(this.food)
-      : byWeight = food.weightBased,
-        amountController = TextEditingController(text: food.weightBased ? '100' : '1');
+      : byWeight = !(food.cat == 'Ingredients' && food.weightBased),
+        amountController = TextEditingController(
+            text: food.cat == 'Ingredients' && food.weightBased
+                ? '1'
+                : food.weightBased ? '100' : '1');
 
   final FoodItem food;
   final TextEditingController amountController;
@@ -226,6 +256,9 @@ class _RecipeIngredient {
 
   double get amount => double.tryParse(amountController.text.trim()) ?? 0;
   double? get gramsPerServing {
+    // Raw ingredients use a practical default: one piece/portion = 30 g.
+    // Their source nutrition is still per 100 g, so weight mode remains exact.
+    if (food.cat == 'Ingredients' && food.weightBased) return 30;
     if (food.weightBased) return 100;
     final match = RegExp(r'(\d+(?:\.\d+)?)\s*g', caseSensitive: false)
         .firstMatch(food.unit);
@@ -233,7 +266,11 @@ class _RecipeIngredient {
   }
 
   bool get canUseWeight => gramsPerServing != null;
-  double get servings => byWeight ? amount / (gramsPerServing ?? 100) : amount;
+  double get servings {
+    if (byWeight) return amount / (food.weightBased ? 100 : (gramsPerServing ?? 100));
+    if (food.cat == 'Ingredients' && food.weightBased) return amount * 0.3;
+    return amount;
+  }
   double get totalGrams => byWeight
       ? amount
       : amount * (gramsPerServing ?? 0);
@@ -245,7 +282,15 @@ class _RecipeIngredient {
 class AddFoodSheet extends StatefulWidget {
   final MealType? initialMeal;
   final bool recipeOnly;
-  const AddFoodSheet({super.key, this.initialMeal, this.recipeOnly = false});
+  final bool fullPage;
+  final FoodItem? editingRecipe;
+  const AddFoodSheet({
+    super.key,
+    this.initialMeal,
+    this.recipeOnly = false,
+    this.fullPage = false,
+    this.editingRecipe,
+  });
 
   @override
   State<AddFoodSheet> createState() => _AddFoodSheetState();
@@ -284,6 +329,31 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   void initState() {
     super.initState();
     mode = widget.recipeOnly ? _Mode.custom : _Mode.search;
+    final recipe = widget.editingRecipe;
+    if (recipe != null) {
+      _recipeName.text = recipe.name;
+      _recipeYield.text = (recipe.recipeYield ?? 1).toString();
+      _recipeByWeight = recipe.recipeByWeight;
+      final allFoods = searchFoods('', extra: [
+        ...context.read<AppState>().customFoods,
+        ...context.read<AppState>().catalogFoods,
+      ]);
+      for (final saved in recipe.recipeIngredients) {
+        final name = saved['name']?.toString().trim().toLowerCase();
+        FoodItem? source;
+        for (final item in allFoods) {
+          if (item.name.trim().toLowerCase() == name) {
+            source = item;
+            break;
+          }
+        }
+        if (source == null) continue;
+        final ingredient = _RecipeIngredient(source)
+          ..byWeight = saved['byWeight'] == true;
+        ingredient.amountController.text = saved['amount']?.toString() ?? '1';
+        _ingredients.add(ingredient);
+      }
+    }
   }
 
   @override
@@ -332,18 +402,15 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height * 0.84;
-    return SizedBox(
-      height: h,
-      child: AnimatedSwitcher(
+    final content = AnimatedSwitcher(
         duration: const Duration(milliseconds: 320),
         switchInCurve: Curves.easeOutCubic,
         child: switch (mode) {
           _Mode.search => _search(),
           _Mode.detail => _detail(),
           _Mode.custom => _custom(),
-        },
-      ),
-    );
+        });
+    return widget.fullPage ? content : SizedBox(height: h, child: content);
   }
 
   // ── search list
@@ -512,6 +579,19 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
               style: t(13, color: C.textDim)),
         ),
         const SizedBox(height: 18),
+        if (f.isRecipe)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => RecipeBuilderScreen(editingRecipe: f),
+                ));
+              },
+              icon: const Icon(Icons.edit_rounded, size: 18),
+              label: const Text('Edit recipe'),
+            ),
+          ),
 
         // live nutrition
         GlassCard(
@@ -762,7 +842,10 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(food.name, style: t(15, w: FontWeight.w700)),
-                      subtitle: Text(food.weightBased ? 'Per 100 g' : food.unit,
+                      subtitle: Text(
+                          food.cat == 'Ingredients' && food.weightBased
+                              ? '1 piece = 30 g · weight available'
+                              : food.weightBased ? 'Per 100 g' : food.unit,
                           style: t(12, color: C.textDim)),
                       trailing: Text('${food.kcal.round()} kcal',
                           style: t(12, color: C.mint, w: FontWeight.w700)),
@@ -788,18 +871,26 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         ? (yieldValue <= 0 ? 0 : yieldValue / 100)
         : yieldValue;
     final perUnit = divisor <= 0 ? Nutrition.zero : total.scale(1 / divisor);
+    final validYield = _recipeByWeight ? yieldValue >= 10 : yieldValue > 0;
     final canSave = _recipeName.text.trim().isNotEmpty &&
-        _ingredients.isNotEmpty && yieldValue > 0;
+        _ingredients.isNotEmpty && validYield;
     return SingleChildScrollView(
       key: const ValueKey('recipe'),
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Pressable(onTap: () => setState(() => mode = _Mode.search),
+          Pressable(onTap: () {
+            if (widget.fullPage) {
+              Navigator.of(context).pop();
+            } else {
+              setState(() => mode = _Mode.search);
+            }
+          },
             child: Padding(padding: const EdgeInsets.all(6),
               child: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: C.text))),
           const SizedBox(width: 6),
-          Expanded(child: Text('Make a recipe', style: t(22, w: FontWeight.w800))),
+          Expanded(child: Text(widget.editingRecipe == null ? 'Make a recipe' : 'Edit recipe',
+              style: t(22, w: FontWeight.w800))),
           TextButton.icon(
             onPressed: () => setState(() => _recipeMode = false),
             icon: const Icon(Icons.edit_note_rounded, size: 18),
@@ -842,6 +933,12 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           suffix: _recipeByWeight ? 'g' : 'pieces',
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: (_) => setState(() {})),
+        if (_recipeByWeight && yieldValue > 0 && yieldValue < 10)
+          Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Text('Enter at least 10 g as the prepared recipe weight.',
+                style: t(12, color: C.flame)),
+          ),
         const SizedBox(height: 16),
         GlassCard(tint: C.mintGradient, child: Column(children: [
           Text('Per ${_recipeByWeight ? '100 g' : 'piece'}', style: t(13, color: Colors.white70)),
@@ -862,9 +959,20 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
               kcal: perUnit.kcal, p: perUnit.protein, c: perUnit.carbs, f: perUnit.fat,
               oil: 0, styles: const [CookStyle.plain], defaultStyle: CookStyle.plain,
               custom: true, weightBased: _recipeByWeight,
+              recipeIngredients: _ingredients.map((ingredient) => {
+                'name': ingredient.food.name,
+                'amount': ingredient.amount,
+                'byWeight': ingredient.byWeight,
+              }).toList(),
+              recipeYield: yieldValue,
+              recipeByWeight: _recipeByWeight,
             );
             context.read<AppState>().saveCustomFood(food);
-            setState(() { query = food.name; mode = _Mode.search; });
+            if (widget.fullPage) {
+              Navigator.of(context).pop();
+            } else {
+              setState(() { query = food.name; mode = _Mode.search; });
+            }
           } : null)),
       ]),
     );

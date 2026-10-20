@@ -260,6 +260,9 @@ class AppState extends ChangeNotifier {
         'styles': food.styles.map((style) => style.index).toList(),
         'default': food.defaultStyle.index,
         'weightBased': food.weightBased,
+        'recipeIngredients': food.recipeIngredients,
+        'recipeYield': food.recipeYield,
+        'recipeByWeight': food.recipeByWeight,
       };
 
   FoodItem _customFoodFromJson(Map<String, dynamic> json) {
@@ -283,6 +286,12 @@ class AppState extends ChangeNotifier {
       defaultStyle: CookStyle.values[defaultIndex.clamp(0, CookStyle.values.length - 1)],
       custom: true,
       weightBased: json['weightBased'] == true,
+      recipeIngredients: (json['recipeIngredients'] as List? ?? const [])
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(),
+      recipeYield: (json['recipeYield'] as num?)?.toDouble(),
+      recipeByWeight: json['recipeByWeight'] == true,
     );
   }
 

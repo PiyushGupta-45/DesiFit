@@ -32,6 +32,12 @@ class FoodItem {
   final bool custom;
   /// True when one quantity means 100 g instead of a household serving.
   final bool weightBased;
+  /// Preserved only for user-made recipes so they can be opened and edited.
+  final List<Map<String, dynamic>> recipeIngredients;
+  final double? recipeYield;
+  final bool recipeByWeight;
+
+  bool get isRecipe => recipeIngredients.isNotEmpty;
 
   const FoodItem({
     required this.name,
@@ -47,6 +53,9 @@ class FoodItem {
     required this.defaultStyle,
     this.custom = false,
     this.weightBased = false,
+    this.recipeIngredients = const <Map<String, dynamic>>[],
+    this.recipeYield,
+    this.recipeByWeight = false,
   });
 
   /// Wire format used by the global MongoDB food catalogue.
