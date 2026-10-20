@@ -353,6 +353,14 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
         ingredient.amountController.text = saved['amount']?.toString() ?? '1';
         _ingredients.add(ingredient);
       }
+      // Older drafts could have stored the default "1" as a recipe's total
+      // weight. That makes a perfectly normal dish look 100x too caloric when
+      // expressed per 100 g. Replace only that invalid value with a sensible
+      // estimate from the ingredients; a valid user-entered yield is retained.
+      if (_recipeByWeight &&
+          (double.tryParse(_recipeYield.text.trim()) ?? 0) < 10) {
+        _recipeYield.text = _recipeYieldText(_estimatedRecipeWeight);
+      }
     }
   }
 
@@ -579,18 +587,27 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
               style: t(13, color: C.textDim)),
         ),
         const SizedBox(height: 18),
-        if (f.isRecipe)
+        if (f.custom)
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => RecipeBuilderScreen(editingRecipe: f),
-                ));
-              },
-              icon: const Icon(Icons.edit_rounded, size: 18),
-              label: const Text('Edit recipe'),
-            ),
+            child: Wrap(spacing: 2, children: [
+              if (f.isRecipe)
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => RecipeBuilderScreen(editingRecipe: f),
+                    ));
+                  },
+                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  label: const Text('Edit recipe'),
+                ),
+              TextButton.icon(
+                onPressed: () => _deleteCustomFood(f),
+                style: TextButton.styleFrom(foregroundColor: C.flame),
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                label: const Text('Delete'),
+              ),
+            ]),
           ),
 
         // live nutrition
@@ -709,6 +726,30 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
     Navigator.pop(context);
   }
 
+  Future<void> _deleteCustomFood(FoodItem food) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete custom food?'),
+        content: Text('"${food.name}" will be removed from your recipes.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: C.flame),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true || !mounted) return;
+    context.read<AppState>().removeCustomFood(food);
+    Navigator.pop(context);
+  }
+
   Widget _macro(String l, double v, Color c) => Expanded(
         child: Column(children: [
           Text('${v.toStringAsFixed(v < 10 ? 1 : 0)} g',
@@ -809,6 +850,29 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   Nutrition get _recipeNutrition => _ingredients.fold(
       Nutrition.zero, (total, ingredient) => total + ingredient.nutrition);
 
+  /// Before cooking, ingredient weights are the best useful default for the
+  /// prepared dish. Users can replace this with the actual cooked weight.
+  double get _estimatedRecipeWeight => _ingredients.fold(
+      0.0, (total, ingredient) => total + ingredient.totalGrams);
+
+  String _recipeYieldText(double grams) {
+    final safeGrams = grams < 10 ? 100.0 : grams;
+    return safeGrams == safeGrams.roundToDouble()
+        ? safeGrams.toInt().toString()
+        : safeGrams.toStringAsFixed(1);
+  }
+
+  void _selectRecipeWeightMode() {
+    final current = double.tryParse(_recipeYield.text.trim()) ?? 0;
+    setState(() {
+      _recipeByWeight = true;
+      // "1" is the serving-mode default, not a realistic prepared weight.
+      if (current < 10) {
+        _recipeYield.text = _recipeYieldText(_estimatedRecipeWeight);
+      }
+    });
+  }
+
   Future<void> _addRecipeIngredient() async {
     final app = context.read<AppState>();
     final foods = searchFoods('', extra: [...app.customFoods, ...app.catalogFoods]);
@@ -870,8 +934,12 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
     final divisor = _recipeByWeight
         ? (yieldValue <= 0 ? 0 : yieldValue / 100)
         : yieldValue;
-    final perUnit = divisor <= 0 ? Nutrition.zero : total.scale(1 / divisor);
+    // Never show a scaled nutrition result for an invalid yield. Apart from
+    // being misleading, a 1 g default makes the result appear 100x larger.
     final validYield = _recipeByWeight ? yieldValue >= 10 : yieldValue > 0;
+    final perUnit = !validYield || divisor <= 0
+        ? Nutrition.zero
+        : total.scale(1 / divisor);
     final canSave = _recipeName.text.trim().isNotEmpty &&
         _ingredients.isNotEmpty && validYield;
     return SingleChildScrollView(
@@ -925,7 +993,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           const SizedBox(width: 8),
           Expanded(child: GlassChip(label: 'By weight', selected: _recipeByWeight,
               activeGradient: C.mintGradient,
-              onTap: () => setState(() => _recipeByWeight = true))),
+              onTap: _selectRecipeWeightMode)),
         ]),
         const SizedBox(height: 10),
         GlassField(controller: _recipeYield,

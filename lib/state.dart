@@ -239,6 +239,19 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes a user-created food/recipe from both the offline cache and the
+  /// next authenticated cloud snapshot.  The app root observes this change
+  /// and uploads [cloudSnapshot] to MongoDB automatically.
+  void removeCustomFood(FoodItem food) {
+    if (!food.custom) return;
+    final name = food.name.trim().toLowerCase();
+    customFoods.removeWhere(
+      (item) => item.name.trim().toLowerCase() == name,
+    );
+    _saveCustomFoods();
+    notifyListeners();
+  }
+
   /// Replaces the locally cached global food catalogue with the backend's
   /// active list. The list is persisted so food search still works offline.
   Future<void> replaceCatalogFoods(List<FoodItem> foods) async {
